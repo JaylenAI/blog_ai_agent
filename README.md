@@ -3,7 +3,7 @@
 > 주제 한 줄 → 자료조사 → 본문 작성 → 다이어그램 생성 → Tistory 게시까지 완전 자동화하는 웹 플랫폼.
 > Claude Max 구독만으로 동작하며, **편당 추가 비용 $0**.
 
-![status](https://img.shields.io/badge/status-Phase%208%20완료-blue)
+![status](https://img.shields.io/badge/status-Phase%2010%20완료-blue)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![lang](https://img.shields.io/badge/lang-한국어-red)
 ![Cost](https://img.shields.io/badge/cost%2Fpost-%240-success)
@@ -163,14 +163,66 @@ blog_ai_agent/
 |---------|------|------|
 | **M1** | Phase 0~5 기획·설계 문서 완성 | ✅ 완료 |
 | **M2** | Phase 6~8 UX/셋업/마일스톤 완성 | ✅ 완료 |
-| **M3** | 파이프라인 코어 (Router→Researcher→Outliner→Gate 1) | ⏳ 예정 |
-| **M4** | Generator + Validator + Gate 2 | ⏳ 예정 |
-| **M5** | 이미지 파이프라인 (Mermaid + 썸네일 + SVG) | ⏳ 예정 |
-| **M6** | Publisher (Tistory Playwright 배포) | ⏳ 예정 |
-| **M7** | 웹 플랫폼 통합 (FastAPI + React) | ⏳ 예정 |
+| **M3** | 파이프라인 코어 (Router→Researcher→Outliner→Gate 1) | ✅ 완료 |
+| **M4** | Generator + Validator + Gate 2 | ✅ 완료 |
+| **M5** | 이미지 파이프라인 (Mermaid + 썸네일 + SVG) | ✅ 완료 |
+| **M6** | Publisher (Tistory Playwright 배포) | ✅ 완료 |
+| **M7** | 웹 플랫폼 통합 (FastAPI + React SSE) | ✅ 완료 |
 | **M8** | 운영 최적화 (주제 큐, 예약 발행, 분석) | ⏳ 미래 |
 
 상세는 [`docs/08-milestones.md`](docs/08-milestones.md).
+
+---
+
+## 빠른 시작
+
+### 사전 요구사항
+
+- Python 3.12+ / [uv](https://docs.astral.sh/uv/)
+- Node.js 22+ / [pnpm](https://pnpm.io/)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (Max 구독 인증 완료)
+- [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) (`npm i -g @mermaid-js/mermaid-cli`)
+
+### 설치 및 실행
+
+```bash
+git clone https://github.com/JaylenAI/blog_ai_agent.git
+cd blog_ai_agent
+
+# 백엔드
+cd backend
+cp .env.example .env   # OBSIDIAN_VAULT_PATH 등 편집
+uv sync
+uv run alembic upgrade head
+uv run uvicorn app.main:app --reload
+
+# 프론트엔드 (새 터미널)
+cd frontend
+pnpm install
+pnpm dev
+```
+
+브라우저에서 `http://localhost:5173` 접속.
+
+### Docker로 실행
+
+```bash
+cp backend/.env.example backend/.env
+docker compose up --build
+```
+
+### 테스트
+
+```bash
+# 백엔드 (285 tests, 91%+ coverage)
+cd backend && uv run pytest tests/ -x -q
+
+# 프론트엔드 E2E (9 tests)
+cd frontend && pnpm test:e2e
+
+# 상세 health check
+curl http://localhost:8000/api/v1/health/detailed | jq
+```
 
 ---
 

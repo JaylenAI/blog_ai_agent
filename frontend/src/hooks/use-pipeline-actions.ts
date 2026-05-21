@@ -2,63 +2,37 @@ import { useCallback } from "react";
 import { api } from "../api/client";
 import { useAppStore } from "../stores/app-store";
 import { usePipelineStore } from "../stores/pipeline-store";
+import { usePipelineSSE } from "./use-pipeline-sse";
 import type { PipelineEvent } from "../types/pipeline";
 
 export function usePipelineActions() {
   const { setPipelineMode, closeGateModal, setArticleContent, activeArticle } =
     useAppStore();
-  const { setEvents, setValidations, setRunning, setError, events } =
-    usePipelineStore();
+  const { setValidations, setRunning, setError } = usePipelineStore();
+  const { startStream } = usePipelineSSE();
 
   const approveGate = useCallback(
     async (runId: number) => {
-      setRunning(true);
-      setError(null);
-      try {
-        const res = await api.pipeline.approve(runId);
-        if (!res.success || !res.data) {
-          throw new Error(res.error ?? "승인 실패");
-        }
+      closeGateModal();
 
-        const newEvents = res.data.events as PipelineEvent[];
-        setEvents([...events, ...newEvents]);
-
-        const lastEvent = newEvents[newEvents.length - 1];
-        if (lastEvent?.event_type === "gate_pending") {
-          setPipelineMode(
-            lastEvent.stage === "gate_one" ? "outline" : "gate2",
-          );
-        } else if (lastEvent?.event_type === "pipeline_complete") {
-          setPipelineMode("published");
-        } else if (lastEvent?.event_type === "stage_error") {
-          setError(lastEvent.message);
-        }
-
-        closeGateModal();
-
-        if (activeArticle) {
-          const content = await api.articles.getContent(activeArticle.id);
-          if (content) {
-            setArticleContent(content);
-          }
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "알 수 없는 오류";
-        setError(msg);
-      } finally {
-        setRunning(false);
-      }
+      await startStream(
+        `/pipeline/runs/${runId}/approve/stream`,
+        {},
+        {
+          onEvent: async (event: PipelineEvent) => {
+            if (
+              event.event_type === "gate_pending" &&
+              event.stage === "gate_two" &&
+              activeArticle
+            ) {
+              const content = await api.articles.getContent(activeArticle.id);
+              if (content) setArticleContent(content);
+            }
+          },
+        },
+      );
     },
-    [
-      events,
-      setEvents,
-      setRunning,
-      setError,
-      setPipelineMode,
-      closeGateModal,
-      activeArticle,
-      setArticleContent,
-    ],
+    [startStream, closeGateModal, activeArticle, setArticleContent],
   );
 
   const rejectGate = useCallback(

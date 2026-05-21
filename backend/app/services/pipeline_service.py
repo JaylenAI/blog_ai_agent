@@ -132,6 +132,9 @@ class PipelineService:
     async def get_run(self, run_id: int) -> PipelineRun | None:
         return await self._pipeline_repo.find_by_id(run_id)
 
+    async def get_active_run(self) -> PipelineRun | None:
+        return await self._pipeline_repo.find_latest_active()
+
     async def get_runs_for_article(self, article_id: int) -> list[PipelineRun]:
         return await self._pipeline_repo.find_by_article_id(article_id)
 

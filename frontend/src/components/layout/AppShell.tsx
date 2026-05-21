@@ -1,17 +1,26 @@
-import { useCallback } from "react";
+import { lazy, Suspense, useCallback } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
 import { useArticles } from "../../hooks/use-articles";
+import { usePipelineSSE } from "../../hooks/use-pipeline-sse";
+import { useRestorePipeline } from "../../hooks/use-restore-pipeline";
 import { api } from "../../api/client";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
-import { RightPanel } from "./RightPanel";
 import { Launcher } from "../editor/Launcher";
-import { Editor } from "../editor/Editor";
-import { GateModal } from "../gate/GateModal";
 import { PipelineProgress } from "../common/PipelineProgress";
 import type { Article } from "../../types/article";
 import type { PipelineEvent } from "../../types/pipeline";
+
+const Editor = lazy(() =>
+  import("../editor/Editor").then((m) => ({ default: m.Editor })),
+);
+const GateModal = lazy(() =>
+  import("../gate/GateModal").then((m) => ({ default: m.GateModal })),
+);
+const RightPanel = lazy(() =>
+  import("./RightPanel").then((m) => ({ default: m.RightPanel })),
+);
 
 export function AppShell() {
   const {
@@ -22,18 +31,17 @@ export function AppShell() {
     setPipelineMode,
     setActiveArticle,
     addArticle,
-    openGateModal,
     closeGateModal,
     setArticleContent,
   } = useAppStore();
 
-  const { setRunning, setEvents, setError } = usePipelineStore();
+  const { setError } = usePipelineStore();
   const { refetch } = useArticles();
+  const { startStream } = usePipelineSSE();
+  useRestorePipeline();
 
   const handleStart = useCallback(
     async (topic: string, autoGateOne: boolean) => {
-      setRunning(true);
-      setError(null);
       setPipelineMode("research");
 
       try {
@@ -45,52 +53,41 @@ export function AppShell() {
         addArticle(article);
         setActiveArticle(article);
 
-        const pipelineRes = await api.pipeline.start(article.id, autoGateOne);
-        if (!pipelineRes.success || !pipelineRes.data) {
-          throw new Error(pipelineRes.error ?? "파이프라인 시작 실패");
-        }
-
-        const events = pipelineRes.data.events as PipelineEvent[];
-        const runId = pipelineRes.data.run_id;
-        setEvents(events);
-
-        const lastEvent = events[events.length - 1];
-        if (lastEvent?.event_type === "gate_pending") {
-          if (lastEvent.stage === "gate_one") {
-            setPipelineMode("outline");
-            openGateModal("gate_one", runId);
-          } else {
-            setPipelineMode("gate2");
-            openGateModal("gate_two", runId);
-
-            const content = await api.articles.getContent(article.id);
-            if (content) setArticleContent(content);
-          }
-        } else if (lastEvent?.event_type === "pipeline_complete") {
-          setPipelineMode("published");
-        } else if (lastEvent?.event_type === "stage_error") {
-          setPipelineMode("idle");
-          setError(lastEvent.message);
-        }
+        await startStream(
+          "/pipeline/start/stream",
+          {
+            body: JSON.stringify({
+              article_id: article.id,
+              auto_gate_one: autoGateOne,
+            }),
+          },
+          {
+            onEvent: async (event: PipelineEvent) => {
+              if (
+                event.event_type === "gate_pending" &&
+                event.stage === "gate_two"
+              ) {
+                const content = await api.articles.getContent(article.id);
+                if (content) setArticleContent(content);
+              }
+            },
+          },
+        );
 
         void refetch();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "알 수 없는 오류";
         setError(msg);
         setPipelineMode("idle");
-      } finally {
-        setRunning(false);
       }
     },
     [
       setPipelineMode,
       setActiveArticle,
       addArticle,
-      setRunning,
-      setEvents,
       setError,
-      openGateModal,
       setArticleContent,
+      startStream,
       refetch,
     ],
   );
@@ -119,22 +116,26 @@ export function AppShell() {
           </div>
         )}
 
-        {activeArticle ? (
-          <Editor article={activeArticle} />
-        ) : (
-          <Launcher onStart={handleStart} disabled={isRunning} />
-        )}
+        <Suspense>
+          {activeArticle ? (
+            <Editor article={activeArticle} />
+          ) : (
+            <Launcher onStart={handleStart} disabled={isRunning} />
+          )}
+        </Suspense>
       </div>
 
-      {rightPanelOpen && <RightPanel />}
+      <Suspense>
+        {rightPanelOpen && <RightPanel />}
 
-      {gateModal && (
-        <GateModal
-          gate={gateModal.gate}
-          runId={gateModal.runId}
-          onClose={closeGateModal}
-        />
-      )}
+        {gateModal && (
+          <GateModal
+            gate={gateModal.gate}
+            runId={gateModal.runId}
+            onClose={closeGateModal}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

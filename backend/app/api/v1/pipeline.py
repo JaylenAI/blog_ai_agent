@@ -121,6 +121,19 @@ async def get_validations(
     )
 
 
+@router.get("/runs/active")
+async def get_active_run(
+    service: PipelineService = Depends(get_pipeline_service),
+) -> ApiResponse[PipelineRunResponse | None]:
+    run = await service.get_active_run()
+    if not run:
+        return ApiResponse(success=True, data=None)
+    return ApiResponse(
+        success=True,
+        data=PipelineRunResponse.model_validate(run),
+    )
+
+
 @router.get("/runs/{run_id}")
 async def get_run(
     run_id: int,

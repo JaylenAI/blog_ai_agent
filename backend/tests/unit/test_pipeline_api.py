@@ -240,3 +240,38 @@ async def test_reject_gate_not_found(client: AsyncClient) -> None:
 
     response = await client.post("/api/v1/pipeline/runs/9999/reject")
     assert response.status_code == 400
+
+
+async def test_active_run_none(client: AsyncClient) -> None:
+    mock_claude = AsyncMock()
+    mock_fm = MagicMock()
+
+    client._transport.app.dependency_overrides[get_claude_client] = lambda: mock_claude
+    client._transport.app.dependency_overrides[get_file_manager] = lambda: mock_fm
+
+    response = await client.get("/api/v1/pipeline/runs/active")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"] is None
+
+
+async def test_active_run_returns_paused(client: AsyncClient) -> None:
+    _setup_mocks(client)
+
+    create_resp = await client.post(
+        "/api/v1/articles", json={"topic": "활성 run 테스트"}
+    )
+    article_id = create_resp.json()["data"]["id"]
+
+    await client.post(
+        "/api/v1/pipeline/start", json={"article_id": article_id}
+    )
+
+    response = await client.get("/api/v1/pipeline/runs/active")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"] is not None
+    assert body["data"]["status"] == "paused"
+    assert body["data"]["article_id"] == article_id

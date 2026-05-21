@@ -6,7 +6,7 @@ import type {
   ValidationSummary,
 } from "../types/pipeline";
 
-const BASE_URL = "/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 async function request<T>(
   path: string,
@@ -59,6 +59,8 @@ export const api = {
         method: "POST",
       }),
     getRun: (runId: number) => request<PipelineRun>(`/pipeline/runs/${runId}`),
+    getActiveRun: () =>
+      request<PipelineRun | null>("/pipeline/runs/active"),
     getValidations: (runId: number) =>
       request<{ validations: ValidationItem[]; summary: ValidationSummary }>(
         `/pipeline/runs/${runId}/validations`,

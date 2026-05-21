@@ -31,3 +31,15 @@ class PipelineRepository(BaseRepository[PipelineRun]):
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def find_latest_active(self) -> PipelineRun | None:
+        stmt = (
+            select(PipelineRun)
+            .where(
+                PipelineRun.status.in_(["running", "paused", "pending"])
+            )
+            .order_by(PipelineRun.started_at.desc())
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()

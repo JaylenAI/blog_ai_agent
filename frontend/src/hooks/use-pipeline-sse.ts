@@ -3,12 +3,17 @@ import { usePipelineStore } from "../stores/pipeline-store";
 import { useAppStore } from "../stores/app-store";
 import type { PipelineEvent } from "../types/pipeline";
 
-const BASE_URL = "/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
+
+export interface SSECallbacks {
+  onRunId?: (runId: number) => void;
+  onEvent?: (event: PipelineEvent) => void;
+}
 
 export function usePipelineSSE() {
   const abortRef = useRef<AbortController | null>(null);
   const { addEvent, setRunning, setError } = usePipelineStore();
-  const { setPipelineMode, openGateModal, setArticleContent } = useAppStore();
+  const { setPipelineMode, openGateModal } = useAppStore();
 
   const handleEventType = useCallback(
     (event: PipelineEvent) => {
@@ -47,9 +52,7 @@ export function usePipelineSSE() {
     async (
       url: string,
       options: RequestInit = {},
-      callbacks?: {
-        onRunId?: (runId: number) => void;
-      },
+      callbacks?: SSECallbacks,
     ) => {
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -97,6 +100,7 @@ export function usePipelineSSE() {
                 }
 
                 handleEventType(event);
+                callbacks?.onEvent?.(event);
               } catch {
                 // skip malformed JSON
               }
