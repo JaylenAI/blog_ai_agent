@@ -7,6 +7,9 @@ interface GateModalState {
   runId: number;
 }
 
+type Theme = "light" | "dark";
+type Density = "compact" | "default" | "spacious";
+
 interface AppState {
   sidebarOpen: boolean;
   rightPanelOpen: boolean;
@@ -17,6 +20,9 @@ interface AppState {
   articleContent: string | null;
   gateModal: GateModalState | null;
   articlesLoading: boolean;
+  theme: Theme;
+  density: Density;
+  accentHue: number;
 
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
@@ -29,6 +35,9 @@ interface AppState {
   openGateModal: (gate: GateModalState["gate"], runId: number) => void;
   closeGateModal: () => void;
   setArticlesLoading: (loading: boolean) => void;
+  setTheme: (theme: Theme) => void;
+  setDensity: (density: Density) => void;
+  setAccentHue: (hue: number) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -41,6 +50,9 @@ export const useAppStore = create<AppState>((set) => ({
   articleContent: null,
   gateModal: null,
   articlesLoading: false,
+  theme: (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light") as Theme,
+  density: "default" as Density,
+  accentHue: 255,
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
@@ -55,4 +67,7 @@ export const useAppStore = create<AppState>((set) => ({
   openGateModal: (gate, runId) => set({ gateModal: { gate, runId } }),
   closeGateModal: () => set({ gateModal: null }),
   setArticlesLoading: (loading) => set({ articlesLoading: loading }),
+  setTheme: (theme) => set({ theme }),
+  setDensity: (density) => set({ density }),
+  setAccentHue: (hue) => set({ accentHue: hue }),
 }));

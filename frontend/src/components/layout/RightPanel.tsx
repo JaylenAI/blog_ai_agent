@@ -1,71 +1,63 @@
+import { useEffect } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
+import { Icons } from "../common/Icons";
 
-const TABS = [
-  { key: "pipeline" as const, label: "파이프라인" },
-  { key: "references" as const, label: "자료" },
-  { key: "validation" as const, label: "검증" },
+interface PipelineStage {
+  id: string;
+  key: string;
+  num: number | null;
+  name: string;
+  desc: string;
+  expected: string;
+  gate?: boolean;
+}
+
+const PIPELINE_STAGES: readonly PipelineStage[] = [
+  { id: "router", key: "router", num: 1, name: "Router", desc: "주제 분석 · 키워드 추출 · 분량 결정", expected: "10~20초" },
+  { id: "research", key: "researcher", num: 2, name: "Researcher", desc: "4-channel 자료수집 (병렬)", expected: "2~3분" },
+  { id: "outline", key: "outliner", num: 3, name: "Outliner", desc: "7~9개 대섹션 + 출처 매핑", expected: "30~60초" },
+  { id: "gate1", key: "gate_one", num: null, name: "Gate 1", desc: "사용자 아웃라인 승인", expected: "사람 검수", gate: true },
+  { id: "generate", key: "generator", num: 4, name: "Generator", desc: "본문 + Mermaid/SVG 병렬 생성", expected: "3~5분" },
+  { id: "validate", key: "validator", num: 5, name: "Validator", desc: "14항목 + SEO/AEO/GEO + oracle", expected: "30~60초" },
+  { id: "gate2", key: "gate_two", num: null, name: "Gate 2", desc: "최종 승인 (필수, 자동화 불가)", expected: "사람 검수", gate: true },
+  { id: "publish", key: "publisher", num: 6, name: "Publisher", desc: "md → Tistory HTML + 클립보드", expected: "1~2분" },
 ];
-
-const STAGES = [
-  { key: "router", label: "Router", desc: "주제 분석 · 키워드 추출" },
-  { key: "researcher", label: "Researcher", desc: "4-channel 자료수집" },
-  { key: "outliner", label: "Outliner", desc: "7~9개 대섹션 아웃라인" },
-  { key: "gate_one", label: "Gate 1", desc: "아웃라인 검수" },
-  { key: "generator", label: "Generator", desc: "본문 + 다이어그램 생성" },
-  { key: "validator", label: "Validator", desc: "양식 검증" },
-  { key: "gate_two", label: "Gate 2", desc: "최종 검수 (자동화 불가)" },
-  { key: "publisher", label: "Publisher", desc: "Obsidian · Tistory 발행" },
-];
-
-const CATEGORY_LABELS: Record<string, string> = {
-  style: "STYLE",
-  seo: "SEO",
-  aeo: "AEO",
-  geo: "GEO",
-};
 
 export function RightPanel() {
-  const { rightPanelTab, setRightPanelTab } = useAppStore();
+  const { rightPanelTab, setRightPanelTab, pipelineMode } = useAppStore();
+
+  useEffect(() => {
+    if (pipelineMode === "validate" || pipelineMode === "gate2") {
+      setRightPanelTab("validation");
+    } else if (pipelineMode === "research") {
+      setRightPanelTab("pipeline");
+    }
+  }, [pipelineMode, setRightPanelTab]);
 
   return (
-    <aside
-      className="flex flex-col border-l h-full overflow-y-auto"
-      style={{
-        width: "var(--right-w)",
-        minWidth: "var(--right-w)",
-        borderColor: "var(--color-border)",
-        backgroundColor: "var(--color-bg-elev)",
-      }}
-    >
-      {/* Tabs */}
-      <div
-        className="flex border-b shrink-0"
-        style={{ borderColor: "var(--color-border)" }}
-      >
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            className="flex-1 text-xs py-2.5 font-medium transition-colors"
-            style={{
-              color:
-                rightPanelTab === tab.key
-                  ? "var(--color-accent)"
-                  : "var(--color-text-muted)",
-              borderBottom:
-                rightPanelTab === tab.key
-                  ? "2px solid var(--color-accent)"
-                  : "2px solid transparent",
-            }}
-            onClick={() => setRightPanelTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
+    <aside className="right-panel">
+      <div className="rp-tabs">
+        <button
+          className={`rp-tab ${rightPanelTab === "pipeline" ? "active" : ""}`}
+          onClick={() => setRightPanelTab("pipeline")}
+        >
+          <Icons.Layers s={13} /> 파이프라인
+        </button>
+        <button
+          className={`rp-tab ${rightPanelTab === "references" ? "active" : ""}`}
+          onClick={() => setRightPanelTab("references")}
+        >
+          <Icons.Tag s={13} /> 자료
+        </button>
+        <button
+          className={`rp-tab ${rightPanelTab === "validation" ? "active" : ""}`}
+          onClick={() => setRightPanelTab("validation")}
+        >
+          <Icons.CheckCircle s={13} /> 검증
+        </button>
       </div>
-
-      {/* Tab content */}
-      <div className="flex-1 p-4">
+      <div className="rp-body">
         {rightPanelTab === "pipeline" && <PipelineTab />}
         {rightPanelTab === "references" && <ReferencesTab />}
         {rightPanelTab === "validation" && <ValidationTab />}
@@ -76,12 +68,10 @@ export function RightPanel() {
 
 function PipelineTab() {
   const events = usePipelineStore((s) => s.events);
-  const { gateModal, openGateModal } = useAppStore();
+  const { openGateModal, gateModal } = useAppStore();
 
   const completedStages = new Set(
-    events
-      .filter((e) => e.event_type === "stage_complete")
-      .map((e) => e.stage),
+    events.filter((e) => e.event_type === "stage_complete").map((e) => e.stage),
   );
   const errorStages = new Set(
     events.filter((e) => e.event_type === "stage_error").map((e) => e.stage),
@@ -104,111 +94,253 @@ function PipelineTab() {
   const runId =
     (events.find((e) => e.data?.run_id != null)?.data?.run_id as number) ?? 0;
 
+  const stageState = (key: string) => {
+    if (completedStages.has(key)) return "done";
+    if (activeStages.has(key)) return "active";
+    if (pendingStages.has(key)) return "active";
+    if (errorStages.has(key)) return "error";
+    return "queued";
+  };
+
   return (
-    <div className="space-y-1">
-      {STAGES.map((stage) => {
-        const done = completedStages.has(stage.key);
-        const error = errorStages.has(stage.key);
-        const pending = pendingStages.has(stage.key);
-        const active = activeStages.has(stage.key);
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        {PIPELINE_STAGES.map((p) => {
+          const state = stageState(p.key);
+          const cls = [
+            "pl-stage",
+            state,
+            p.gate ? "gate" : "",
+            state === "done" && p.gate ? "passed" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
 
-        let icon: string;
-        let iconColor: string;
-        if (error) {
-          icon = "!";
-          iconColor = "var(--color-danger)";
-        } else if (done) {
-          icon = "✓";
-          iconColor = "var(--color-success)";
-        } else if (pending) {
-          icon = "●";
-          iconColor = "var(--color-warn)";
-        } else if (active) {
-          icon = "◉";
-          iconColor = "var(--color-accent)";
-        } else {
-          icon = "○";
-          iconColor = "var(--color-text-faint)";
-        }
+          const isPending = pendingStages.has(p.key);
 
-        const isGate =
-          stage.key === "gate_one" || stage.key === "gate_two";
+          return (
+            <div key={p.id} className={cls}>
+              <span className="pl-icon">
+                {state === "done" ? (
+                  <Icons.Check s={11} w={2.5} />
+                ) : p.gate ? (
+                  <Icons.Lock s={10} w={2} />
+                ) : (
+                  <span style={{ fontSize: 10, fontWeight: 700 }}>
+                    {p.num ?? "·"}
+                  </span>
+                )}
+              </span>
+              <div className="pl-title">
+                {p.num && <span className="step">Stage {p.num}</span>}
+                <span>{p.name}</span>
+              </div>
+              <div className="pl-meta">
+                {p.desc} · {p.expected}
+              </div>
+
+              {isPending && p.gate && runId > 0 && (
+                <div className="pl-detail" style={{ display: "block" }}>
+                  <button
+                    className="btn primary"
+                    style={{ width: "100%", justifyContent: "center" }}
+                    onClick={() =>
+                      openGateModal(
+                        p.key as "gate_one" | "gate_two",
+                        runId,
+                      )
+                    }
+                    disabled={gateModal !== null}
+                  >
+                    <Icons.Eye s={13} />{" "}
+                    {p.key === "gate_one"
+                      ? "아웃라인 검수 열기"
+                      : "최종 검수 열기"}
+                  </button>
+                </div>
+              )}
+
+              {state === "active" && p.key === "researcher" && (
+                <div className="pl-detail" style={{ display: "block" }}>
+                  <LibrarianCards />
+                  <EventLog />
+                </div>
+              )}
+
+              {state === "active" && p.key === "generator" && (
+                <div className="pl-detail" style={{ display: "block" }}>
+                  <GenerateProgress />
+                </div>
+              )}
+
+              {(state === "active" || state === "done") &&
+                p.key === "validator" && (
+                  <div
+                    className="pl-detail"
+                    style={{
+                      display:
+                        state === "active" ? "block" : undefined,
+                    }}
+                  >
+                    <ValidateInline />
+                  </div>
+                )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LibrarianCards() {
+  const events = usePipelineStore((s) => s.events);
+  const librarians = [
+    { id: "official", name: "librarian-official" },
+    { id: "github", name: "librarian-github" },
+    { id: "blog-en", name: "librarian-blog-en" },
+    { id: "blog-kr", name: "librarian-blog-kr" },
+  ] as const;
+
+  return (
+    <div className="lib-grid">
+      {librarians.map((l) => {
+        const completeEvent = events.find(
+          (e) =>
+            e.event_type === "stage_complete" &&
+            e.stage === "researcher" &&
+            e.data?.librarian === l.id,
+        );
+        const done = Boolean(completeEvent);
+        const count =
+          (completeEvent?.data?.reference_count as number | undefined) ?? 0;
 
         return (
-          <div key={stage.key} className="flex items-start gap-2 py-1.5">
-            <span
-              className={`text-xs font-bold mt-0.5 ${active ? "animate-pulse" : ""}`}
-              style={{ color: iconColor, minWidth: 14, textAlign: "center" }}
-            >
-              {icon}
-            </span>
-            <div className="flex-1">
-              <div className="text-sm font-medium">{stage.label}</div>
-              <div
-                className="text-xs"
-                style={{ color: "var(--color-text-faint)" }}
-              >
-                {stage.desc}
-              </div>
+          <div key={l.id} className={`lib-card ${done ? "done" : "busy"}`}>
+            <div className="lib-name">{l.name}</div>
+            <div className="lib-stat">
+              {done ? `${count}건 · OK` : "수집 중…"}
             </div>
-            {pending && isGate && runId > 0 && (
-              <button
-                className="text-xs px-2 py-0.5 rounded"
-                style={{
-                  backgroundColor: "var(--color-bg-hover)",
-                  color: "var(--color-accent)",
-                }}
-                onClick={() =>
-                  openGateModal(
-                    stage.key as "gate_one" | "gate_two",
-                    runId,
-                  )
-                }
-                disabled={gateModal !== null}
-              >
-                열기
-              </button>
-            )}
           </div>
         );
       })}
+    </div>
+  );
+}
 
-      {/* Event log */}
-      {events.length > 0 && (
-        <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--color-border)" }}>
-          <div
-            className="text-xs font-medium mb-2"
-            style={{ color: "var(--color-text-faint)" }}
-          >
-            이벤트 로그
+function EventLog() {
+  const events = usePipelineStore((s) => s.events);
+  const recentEvents = events.slice(-7);
+
+  if (recentEvents.length === 0) return null;
+
+  return (
+    <div className="log-stream">
+      {recentEvents.map((e, i) => {
+        const ts = e.data?.timestamp as string | undefined;
+        const timeStr = ts ? formatTimestamp(ts) : "";
+
+        return (
+          <div key={i}>
+            {timeStr && <span className="ts">{timeStr}</span>}
+            <span className="tag">{e.stage.toUpperCase()}</span>
+            <span className={e.event_type === "stage_complete" ? "ok" : ""}>
+              {e.message}
+            </span>
           </div>
-          <div className="space-y-1 max-h-48 overflow-y-auto">
-            {events.map((e, i) => (
-              <div
-                key={i}
-                className="text-xs flex gap-2"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                <span
-                  className="shrink-0 uppercase"
-                  style={{
-                    color:
-                      e.event_type === "stage_error"
-                        ? "var(--color-danger)"
-                        : e.event_type === "stage_complete"
-                          ? "var(--color-success)"
-                          : "var(--color-text-faint)",
-                    minWidth: 56,
-                  }}
-                >
-                  {e.stage}
-                </span>
-                <span className="truncate">{e.message}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatTimestamp(ts: string): string {
+  try {
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+  } catch {
+    return "";
+  }
+}
+
+function GenerateProgress() {
+  const events = usePipelineStore((s) => s.events);
+
+  const outlineEvent = events.find(
+    (e) => e.event_type === "gate_pending" && e.stage === "gate_one",
+  );
+  const totalSections =
+    (outlineEvent?.data as { total_sections?: number } | undefined)
+      ?.total_sections ??
+    (outlineEvent?.data as { outline?: unknown[] } | undefined)?.outline
+      ?.length ??
+    0;
+
+  const completedSections = events.filter(
+    (e) =>
+      e.event_type === "stage_complete" &&
+      e.stage === "generator" &&
+      (e.data as { section_number?: number } | undefined)?.section_number !=
+        null,
+  ).length;
+
+  const completedImages = events.filter(
+    (e) =>
+      e.event_type === "stage_complete" &&
+      e.stage === "generator" &&
+      (e.data as { image?: boolean } | undefined)?.image === true,
+  ).length;
+
+  const totalImages =
+    (
+      events.find(
+        (e) => e.event_type === "stage_start" && e.stage === "generator",
+      )?.data as { total_images?: number } | undefined
+    )?.total_images ?? 0;
+
+  if (totalSections === 0 && totalImages === 0) return null;
+
+  return (
+    <div className="pl-meta" style={{ marginTop: 4 }}>
+      {totalSections > 0 && (
+        <span>
+          섹션 {completedSections}/{totalSections} 작성 중
+        </span>
       )}
+      {totalImages > 0 && (
+        <span>
+          {" "}
+          · 이미지 {completedImages}/{totalImages} 렌더 완료
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ValidateInline() {
+  const validationSummary = usePipelineStore((s) => s.validationSummary);
+  if (!validationSummary) return null;
+
+  return (
+    <div className="validate-grid" style={{ marginTop: 6 }}>
+      <div className="vstat pass">
+        <div className="label">PASS</div>
+        <div className="value" style={{ fontSize: 16 }}>
+          {validationSummary.passed}
+        </div>
+      </div>
+      <div className="vstat warn">
+        <div className="label">WARN</div>
+        <div className="value" style={{ fontSize: 16 }}>
+          {validationSummary.failed}
+        </div>
+      </div>
+      <div className="vstat">
+        <div className="label">점수</div>
+        <div className="value" style={{ fontSize: 16 }}>
+          {Math.round(validationSummary.score * 100)}%
+        </div>
+      </div>
     </div>
   );
 }
@@ -228,51 +360,43 @@ function ReferencesTab() {
   }>;
 
   if (references.length === 0) {
-    return (
-      <div
-        className="text-sm text-center py-8"
-        style={{ color: "var(--color-text-faint)" }}
-      >
-        파이프라인 실행 후 자료가 표시됩니다
-      </div>
-    );
+    return <div className="empty">파이프라인 실행 후 자료가 표시됩니다</div>;
   }
 
+  const getRelevanceClass = (score: number) => {
+    const r = Math.round(score * 5);
+    if (r >= 5) return "r5";
+    if (r >= 4) return "r4";
+    return "r3";
+  };
+
   return (
-    <div className="space-y-2">
-      <div className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-        총 {references.length}건 확보
+    <div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          marginBottom: 10,
+          fontSize: 12,
+          color: "var(--text-muted)",
+        }}
+      >
+        <span>
+          총{" "}
+          <strong style={{ color: "var(--text)" }}>{references.length}건</strong>{" "}
+          확보 · 최소 기준 8건 충족
+        </span>
       </div>
-      {references.map((ref, i) => (
-        <div
-          key={i}
-          className="p-2.5 rounded-md"
-          style={{ backgroundColor: "var(--color-bg-sub)" }}
-        >
-          <div className="flex items-start gap-2">
-            <span
-              className="text-xs font-bold shrink-0 px-1.5 py-0.5 rounded"
-              style={{
-                backgroundColor:
-                  ref.relevance_score >= 0.8
-                    ? "color-mix(in oklch, var(--color-success) 20%, transparent)"
-                    : "var(--color-bg-hover)",
-                color:
-                  ref.relevance_score >= 0.8
-                    ? "var(--color-success)"
-                    : "var(--color-text-faint)",
-              }}
-            >
-              {Math.round(ref.relevance_score * 5)}
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{ref.title}</div>
-              <div
-                className="text-xs mt-0.5 truncate"
-                style={{ color: "var(--color-text-faint)" }}
-              >
-                {ref.source_type} · {new URL(ref.url).hostname}
-              </div>
+      {references.map((r, i) => (
+        <div key={i} className="ref-row">
+          <div className={`ref-rel ${getRelevanceClass(r.relevance_score)}`}>
+            {Math.round(r.relevance_score * 5)}
+          </div>
+          <div className="ref-body">
+            <div className="ref-title">{r.title}</div>
+            <div className="ref-source">
+              <span className="ref-type">{r.source_type}</span>
+              <span>{safeHostname(r.url)}</span>
             </div>
           </div>
         </div>
@@ -281,147 +405,84 @@ function ReferencesTab() {
   );
 }
 
+function safeHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
 function ValidationTab() {
   const { validations, validationSummary } = usePipelineStore();
 
   if (!validationSummary) {
-    return (
-      <div
-        className="text-sm text-center py-8"
-        style={{ color: "var(--color-text-faint)" }}
-      >
-        검증 결과 없음
-      </div>
-    );
+    return <div className="empty">검증 결과 없음</div>;
   }
 
   const grouped = new Map<string, typeof validations>();
   for (const v of validations) {
-    const cat = v.category;
-    const list = grouped.get(cat) ?? [];
+    const list = grouped.get(v.category) ?? [];
     list.push(v);
-    grouped.set(cat, list);
+    grouped.set(v.category, list);
   }
 
+  const CATEGORY_LABELS: Record<string, { title: string; pill: string }> = {
+    style: { title: "STYLE.MD 양식", pill: `${grouped.get("style")?.length ?? 0}항목` },
+    seo: { title: "SEO", pill: "검색엔진" },
+    aeo: { title: "AEO", pill: "답변엔진" },
+    geo: { title: "GEO", pill: "생성엔진" },
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Summary pills */}
-      <div className="flex gap-2">
-        <SummaryPill
-          label="PASS"
-          count={validationSummary.passed}
-          color="var(--color-success)"
-        />
-        <SummaryPill
-          label="FAIL"
-          count={validationSummary.failed}
-          color="var(--color-danger)"
-        />
-        <SummaryPill
-          label="점수"
-          count={Math.round(validationSummary.score * 100)}
-          color="var(--color-accent)"
-          suffix="%"
-        />
+    <div>
+      <div className="validate-grid">
+        <div className="vstat pass">
+          <div className="label">PASS</div>
+          <div className="value">{validationSummary.passed}</div>
+        </div>
+        <div className="vstat warn">
+          <div className="label">WARN</div>
+          <div className="value">{validationSummary.failed}</div>
+        </div>
+        <div className="vstat">
+          <div className="label">점수</div>
+          <div className="value">{Math.round(validationSummary.score * 100)}%</div>
+        </div>
       </div>
 
-      {/* Grouped by category */}
       {Array.from(grouped.entries()).map(([cat, items]) => {
-        const passed = items.filter((v) => v.passed).length;
-        const pct = Math.round((passed / items.length) * 100);
-
+        const labels = CATEGORY_LABELS[cat] ?? {
+          title: cat.toUpperCase(),
+          pill: "",
+        };
         return (
-          <div key={cat}>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-xs font-semibold">
-                {CATEGORY_LABELS[cat] ?? cat.toUpperCase()}
-              </span>
+          <div key={cat} className="vl-section">
+            <div className="vl-section-title">
+              {labels.title}{" "}
+              {labels.pill && <span className="pill">{labels.pill}</span>}
+            </div>
+            {items.map((v, i) => (
               <div
-                className="flex-1 h-1.5 rounded-full overflow-hidden"
-                style={{ backgroundColor: "var(--color-bg-sub)" }}
+                key={i}
+                className={`vl-row ${v.passed ? "pass" : "warn"}`}
               >
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${pct}%`,
-                    backgroundColor:
-                      pct === 100
-                        ? "var(--color-success)"
-                        : "var(--color-warn)",
-                  }}
-                />
+                <span className="vl-ico">
+                  {v.passed ? (
+                    <Icons.Check s={9} w={2.5} />
+                  ) : (
+                    "!"
+                  )}
+                </span>
+                <span className="vl-name">{v.item}</span>
+                <span className="vl-num">
+                  {Math.round(v.score * 100)}%
+                </span>
               </div>
-              <span
-                className="text-xs"
-                style={{ color: "var(--color-text-faint)" }}
-              >
-                {passed}/{items.length}
-              </span>
-            </div>
-
-            <div className="space-y-0.5">
-              {items.map((v, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 text-sm py-1 px-2 rounded"
-                  style={{
-                    backgroundColor: v.passed
-                      ? "transparent"
-                      : "color-mix(in oklch, var(--color-danger) 5%, transparent)",
-                  }}
-                >
-                  <span
-                    style={{
-                      color: v.passed
-                        ? "var(--color-success)"
-                        : "var(--color-danger)",
-                    }}
-                  >
-                    {v.passed ? "✓" : "✗"}
-                  </span>
-                  <span className="flex-1 truncate">{v.item}</span>
-                  <span
-                    className="text-xs"
-                    style={{ color: "var(--color-text-faint)" }}
-                  >
-                    {Math.round(v.score * 100)}%
-                  </span>
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
         );
       })}
-    </div>
-  );
-}
-
-function SummaryPill({
-  label,
-  count,
-  color,
-  suffix = "",
-}: {
-  label: string;
-  count: number;
-  color: string;
-  suffix?: string;
-}) {
-  return (
-    <div
-      className="flex-1 text-center py-2 rounded-md"
-      style={{ backgroundColor: "var(--color-bg-sub)" }}
-    >
-      <div className="text-lg font-semibold" style={{ color }}>
-        {count}
-        {suffix}
-      </div>
-      <div
-        className="text-xs font-medium"
-        style={{ color: "var(--color-text-faint)" }}
-      >
-        {label}
-      </div>
     </div>
   );
 }

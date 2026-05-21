@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback } from "react";
+import { lazy, Suspense, useCallback, useEffect } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
 import { useArticles } from "../../hooks/use-articles";
@@ -8,7 +8,6 @@ import { api } from "../../api/client";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { Launcher } from "../editor/Launcher";
-import { PipelineProgress } from "../common/PipelineProgress";
 import type { Article } from "../../types/article";
 import type { PipelineEvent } from "../../types/pipeline";
 
@@ -34,6 +33,23 @@ export function AppShell() {
     closeGateModal,
     setArticleContent,
   } = useAppStore();
+
+  const theme = useAppStore((s) => s.theme);
+  const density = useAppStore((s) => s.density);
+  const accentHue = useAppStore((s) => s.accentHue);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", theme);
+    if (density !== "default") {
+      root.setAttribute("data-density", density);
+    } else {
+      root.removeAttribute("data-density");
+    }
+    root.style.setProperty("--accent", `oklch(55% 0.13 ${accentHue})`);
+    root.style.setProperty("--accent-soft", `oklch(55% 0.13 ${accentHue} / 0.10)`);
+    root.style.setProperty("--accent-strong", `oklch(45% 0.16 ${accentHue})`);
+  }, [theme, density, accentHue]);
 
   const { setError } = usePipelineStore();
   const { refetch } = useArticles();
@@ -96,25 +112,16 @@ export function AppShell() {
   const error = usePipelineStore((s) => s.error);
 
   return (
-    <div className="flex w-full h-dvh overflow-hidden">
-      {sidebarOpen && <Sidebar />}
+    <div
+      className="app"
+      data-sidebar={sidebarOpen ? "open" : "collapsed"}
+      data-right={rightPanelOpen ? "shown" : "hidden"}
+    >
+      <Sidebar />
+      <Topbar />
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <Topbar />
-        <PipelineProgress />
-
-        {error && (
-          <div
-            className="px-4 py-2 text-sm"
-            style={{
-              backgroundColor:
-                "color-mix(in oklch, var(--color-danger) 10%, transparent)",
-              color: "var(--color-danger)",
-            }}
-          >
-            {error}
-          </div>
-        )}
+      <main className="main">
+        {error && <div className="error-banner">{error}</div>}
 
         <Suspense>
           {activeArticle ? (
@@ -123,10 +130,10 @@ export function AppShell() {
             <Launcher onStart={handleStart} disabled={isRunning} />
           )}
         </Suspense>
-      </div>
+      </main>
 
       <Suspense>
-        {rightPanelOpen && <RightPanel />}
+        <RightPanel />
 
         {gateModal && (
           <GateModal
