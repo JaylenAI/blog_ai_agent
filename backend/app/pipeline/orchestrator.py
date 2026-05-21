@@ -1,8 +1,10 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.models.pipeline_run import PipelineRun, PipelineStage, PipelineStatus
 from app.pipeline.base import PipelineEvent, Stage, StageInput
 from app.utils.logger import get_logger
@@ -50,7 +52,10 @@ class PipelineOrchestrator:
             )
 
             try:
-                output = await stage.execute(stage_input)
+                output = await asyncio.wait_for(
+                    stage.execute(stage_input),
+                    timeout=settings.stage_timeout,
+                )
             except Exception as e:
                 logger.error("Stage %s 실패: %s", stage.name, e, exc_info=True)
                 pipeline_run.status = PipelineStatus.FAILED
