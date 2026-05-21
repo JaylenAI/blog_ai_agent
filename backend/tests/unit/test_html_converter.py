@@ -123,3 +123,77 @@ def test_image_caption() -> None:
     html = markdown_to_html(md)
     assert "image-caption" in html
     assert "아키텍처 다이어그램" in html
+
+
+def test_list_interrupted_by_heading() -> None:
+    md = "- 항목1\n- 항목2\n## 제목"
+    html = markdown_to_html(md)
+    assert "<ul>" in html
+    assert "<h2>제목</h2>" in html
+    assert html.index("</ul>") < html.index("<h2>")
+
+
+def test_list_interrupted_by_image() -> None:
+    md = "- 항목1\n![alt](img.png)"
+    html = markdown_to_html(md)
+    assert "<ul>" in html
+    assert '<img src="img.png"' in html
+
+
+def test_list_interrupted_by_blockquote() -> None:
+    md = "- 항목1\n> 인용문"
+    html = markdown_to_html(md)
+    assert "<ul>" in html
+    assert "<blockquote>" in html
+
+
+def test_list_interrupted_by_hr() -> None:
+    md = "- 항목1\n---"
+    html = markdown_to_html(md)
+    assert "<ul>" in html
+    assert "<hr>" in html
+
+
+def test_list_interrupted_by_paragraph() -> None:
+    md = "- 항목1\n\n일반 문단"
+    html = markdown_to_html(md)
+    assert "<ul>" in html
+    assert "<p>일반 문단</p>" in html
+
+
+def test_list_interrupted_by_code_block() -> None:
+    md = "- 항목1\n```python\ncode\n```"
+    html = markdown_to_html(md)
+    assert "<ul>" in html
+    assert "<pre><code" in html
+
+
+def test_ordered_list() -> None:
+    md = "1. 첫째\n2. 둘째"
+    html = markdown_to_html(md)
+    assert "<li>첫째</li>" in html
+    assert "<li>둘째</li>" in html
+
+
+def test_asterisk_list() -> None:
+    md = "* 별표 항목"
+    html = markdown_to_html(md)
+    assert "<li>별표 항목</li>" in html
+
+
+def test_h1_interrupts_list() -> None:
+    md = "- 항목\n# 큰 제목"
+    html = markdown_to_html(md)
+    assert "<h1>큰 제목</h1>" in html
+
+
+def test_h3_interrupts_list() -> None:
+    md = "- 항목\n### 작은 제목"
+    html = markdown_to_html(md)
+    assert "<h3>작은 제목</h3>" in html
+
+
+def test_invalid_image_syntax() -> None:
+    from app.publishers.html_converter import _convert_image
+    result = _convert_image("not an image", "")
+    assert "<p>" in result
