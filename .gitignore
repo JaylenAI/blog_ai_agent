@@ -63,3 +63,4 @@ logs/
 # SQLite (runtime state)
 *.db
 *.sqlite3
+data/

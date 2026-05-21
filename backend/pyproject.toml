@@ -2,7 +2,6 @@
 name = "blog-ai-agent-backend"
 version = "0.1.0"
 description = "Blog AI Agent 백엔드 — FastAPI + Claude Code CLI subprocess"
-readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [
@@ -13,8 +12,8 @@ dependencies = [
     "uvicorn[standard]>=0.34",
     "sse-starlette>=2.0",
     "pydantic>=2.10",
-    "playwright>=1.49",
-    "pillow>=11.0",
+    "pydantic-settings>=2.7",
+    "sqlalchemy[asyncio]>=2.0",
     "aiosqlite>=0.20",
 ]
 
@@ -33,6 +32,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+ignore = ["B008", "UP046"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -41,6 +41,9 @@ asyncio_mode = "auto"
 [tool.mypy]
 python_version = "3.12"
 strict = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
 
 [build-system]
 requires = ["hatchling"]
