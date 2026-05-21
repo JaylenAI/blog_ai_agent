@@ -24,7 +24,15 @@ def parse_stream_line(line: str) -> StreamEvent | None:
     subtype = data.get("subtype", "")
 
     if event_type == "assistant":
-        return StreamEvent(event_type=event_type, subtype=subtype, text=data.get("text", ""))
+        text = data.get("text", "")
+        if not text:
+            message = data.get("message", {})
+            content = message.get("content", [])
+            if content and isinstance(content, list):
+                text = content[0].get("text", "")
+        return StreamEvent(
+            event_type=event_type, subtype=subtype, text=text
+        )
     if event_type == "result":
         return StreamEvent(event_type=event_type, subtype=subtype, text=data.get("result", ""))
 

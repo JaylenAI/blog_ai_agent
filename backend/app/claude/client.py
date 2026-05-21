@@ -22,7 +22,12 @@ class ClaudeClient:
         self._cli_path = cli_path or settings.claude_code_path
 
     def _build_args(self, prompt: str) -> list[str]:
-        return [self._cli_path, "-p", prompt, "--output-format", "stream-json"]
+        return [
+            self._cli_path,
+            "-p", prompt,
+            "--output-format", "stream-json",
+            "--verbose",
+        ]
 
     async def run(self, prompt: str) -> ClaudeResponse:
         args = self._build_args(prompt)
