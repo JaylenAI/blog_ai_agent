@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# UV
+.python-version
+
+# Node
+node_modules/
+.pnpm-store/
+
+# Build output
+frontend/dist/
+frontend/build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime artifacts (blog generation)
+.sisyphus/
+
+# Test / Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Playwright
+frontend/playwright-report/
+frontend/test-results/
+backend/playwright-report/
+
+# Logs
+*.log
+logs/
+
+# SQLite (runtime state)
+*.db
+*.sqlite3
