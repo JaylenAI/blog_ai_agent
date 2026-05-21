@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -5,17 +6,26 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.middleware.error_handler import register_error_handlers
+from app.api.middleware.rate_limiter import RateLimiterMiddleware
+from app.api.middleware.request_logger import RequestLoggerMiddleware
 from app.api.router import api_router
 from app.config import settings
 from app.db.engine import init_db
-from app.utils.logger import setup_logging
+from app.utils.logger import get_logger, setup_logging
+
+logger = get_logger(__name__)
+
+_shutdown_event = asyncio.Event()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging()
     await init_db()
+    logger.info("Blog AI Agent 시작 (port=%d)", settings.backend_port)
     yield
+    logger.info("Blog AI Agent 종료")
+    _shutdown_event.set()
 
 
 def create_app() -> FastAPI:
@@ -26,6 +36,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.add_middleware(RateLimiterMiddleware, limit=60, window=60)
+    app.add_middleware(RequestLoggerMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[

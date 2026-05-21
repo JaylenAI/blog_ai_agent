@@ -9,6 +9,10 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+DEFAULT_TIMEOUT = 300
+MAX_RETRIES = 2
+RETRY_BASE_DELAY = 2.0
+
 
 @dataclass(frozen=True)
 class ClaudeResponse:
@@ -18,8 +22,16 @@ class ClaudeResponse:
 
 
 class ClaudeClient:
-    def __init__(self, cli_path: str | None = None) -> None:
+    def __init__(
+        self,
+        cli_path: str | None = None,
+        *,
+        timeout: int = DEFAULT_TIMEOUT,
+        max_retries: int = MAX_RETRIES,
+    ) -> None:
         self._cli_path = cli_path or settings.claude_code_path
+        self._timeout = timeout
+        self._max_retries = max_retries
 
     def _build_args(self, prompt: str) -> list[str]:
         return [
@@ -29,9 +41,8 @@ class ClaudeClient:
             "--verbose",
         ]
 
-    async def run(self, prompt: str) -> ClaudeResponse:
+    async def _execute(self, prompt: str) -> ClaudeResponse:
         args = self._build_args(prompt)
-        logger.info("Claude CLI 실행: %s...", prompt[:80])
 
         process = await asyncio.create_subprocess_exec(
             *args,
@@ -39,12 +50,18 @@ class ClaudeClient:
             stderr=asyncio.subprocess.PIPE,
         )
 
-        stdout_bytes, stderr_bytes = await process.communicate()
+        stdout_bytes, stderr_bytes = await asyncio.wait_for(
+            process.communicate(), timeout=self._timeout
+        )
 
         if process.returncode != 0:
-            error_msg = stderr_bytes.decode("utf-8", errors="replace")
-            logger.error("Claude CLI 실패 (code=%d): %s", process.returncode, error_msg)
-            raise RuntimeError(f"Claude CLI failed (exit {process.returncode}): {error_msg}")
+            error_msg = stderr_bytes.decode(
+                "utf-8", errors="replace"
+            )
+            raise RuntimeError(
+                f"Claude CLI failed (exit {process.returncode})"
+                f": {error_msg[:500]}"
+            )
 
         result_text = ""
         session_id = ""
@@ -63,10 +80,55 @@ class ClaudeClient:
                 except json.JSONDecodeError:
                     pass
 
-        return ClaudeResponse(text=result_text, session_id=session_id, cost_usd=cost_usd)
+        return ClaudeResponse(
+            text=result_text,
+            session_id=session_id,
+            cost_usd=cost_usd,
+        )
 
-    async def run_json(self, prompt: str) -> dict:
-        response = await self.run(prompt)
+    async def run(
+        self, prompt: str, *, timeout: int | None = None
+    ) -> ClaudeResponse:
+        logger.info("Claude CLI 실행: %s...", prompt[:80])
+        saved_timeout = self._timeout
+        if timeout is not None:
+            self._timeout = timeout
+
+        try:
+            last_error: Exception | None = None
+            for attempt in range(self._max_retries + 1):
+                try:
+                    return await self._execute(prompt)
+                except TimeoutError:
+                    last_error = TimeoutError(
+                        f"Claude CLI 타임아웃 ({self._timeout}초)"
+                    )
+                    logger.warning(
+                        "Claude CLI 타임아웃 (시도 %d/%d)",
+                        attempt + 1,
+                        self._max_retries + 1,
+                    )
+                except RuntimeError as e:
+                    last_error = e
+                    logger.warning(
+                        "Claude CLI 실패 (시도 %d/%d): %s",
+                        attempt + 1,
+                        self._max_retries + 1,
+                        e,
+                    )
+
+                if attempt < self._max_retries:
+                    delay = RETRY_BASE_DELAY * (2 ** attempt)
+                    await asyncio.sleep(delay)
+
+            raise last_error or RuntimeError("Claude CLI 실행 실패")
+        finally:
+            self._timeout = saved_timeout
+
+    async def run_json(
+        self, prompt: str, *, timeout: int | None = None
+    ) -> dict:
+        response = await self.run(prompt, timeout=timeout)
         return extract_json(response.text)
 
     async def stream(self, prompt: str) -> AsyncGenerator[StreamEvent, None]:

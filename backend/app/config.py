@@ -26,6 +26,8 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
 
+    stage_timeout: int = 600
+
     @property
     def sisyphus_path(self) -> Path:
         return Path(self.sisyphus_dir)

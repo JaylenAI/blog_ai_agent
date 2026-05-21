@@ -1,4 +1,7 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
+from sse_starlette.sse import EventSourceResponse
 
 from app.dependencies import get_pipeline_service
 from app.schemas.common import ApiResponse
@@ -130,3 +133,45 @@ async def get_run(
         success=True,
         data=PipelineRunResponse.model_validate(run),
     )
+
+
+@router.post("/start/stream")
+async def start_pipeline_stream(
+    data: PipelineStartRequest,
+    service: PipelineService = Depends(get_pipeline_service),
+) -> EventSourceResponse:
+    async def event_generator():
+        async for event in service.start_pipeline(
+            data.article_id, auto_gate_one=data.auto_gate_one
+        ):
+            yield {
+                "event": event.event_type,
+                "data": json.dumps({
+                    "event_type": event.event_type,
+                    "stage": event.stage,
+                    "message": event.message,
+                    "data": event.data,
+                }, ensure_ascii=False),
+            }
+
+    return EventSourceResponse(event_generator())
+
+
+@router.post("/runs/{run_id}/approve/stream")
+async def approve_gate_stream(
+    run_id: int,
+    service: PipelineService = Depends(get_pipeline_service),
+) -> EventSourceResponse:
+    async def event_generator():
+        async for event in service.resume_pipeline(run_id):
+            yield {
+                "event": event.event_type,
+                "data": json.dumps({
+                    "event_type": event.event_type,
+                    "stage": event.stage,
+                    "message": event.message,
+                    "data": event.data,
+                }, ensure_ascii=False),
+            }
+
+    return EventSourceResponse(event_generator())

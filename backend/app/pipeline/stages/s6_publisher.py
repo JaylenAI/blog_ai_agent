@@ -1,7 +1,9 @@
 from datetime import datetime
 from pathlib import Path
 
+from app.images.mermaid_renderer import render_all_diagrams
 from app.pipeline.base import Stage, StageInput, StageOutput
+from app.publishers.html_converter import convert_for_tistory
 from app.utils.file_manager import FileManager
 from app.utils.logger import get_logger
 
@@ -33,11 +35,19 @@ class PublisherStage(Stage):
 
         meta = self._fm.read_json(stage_input.slug, "meta.json") or {}
 
+        slug_dir = self._fm.article_dir(stage_input.slug)
+        diagram_results = await render_all_diagrams(slug_dir)
+        rendered_count = sum(1 for d in diagram_results if d["success"])
+
+        html_content = convert_for_tistory(content, meta)
+        self._fm.write_text(stage_input.slug, "tistory.html", html_content)
+
         obsidian_saved = self._save_to_obsidian(content, meta, stage_input.slug)
 
         logger.info(
-            "Publisher 완료: obsidian=%s, tistory=수동배포필요",
+            "Publisher 완료: obsidian=%s, diagrams=%d, html=생성됨",
             obsidian_saved,
+            rendered_count,
         )
 
         return StageOutput(
@@ -45,8 +55,10 @@ class PublisherStage(Stage):
             success=True,
             data={
                 "obsidian_saved": obsidian_saved,
-                "tistory_ready": False,
+                "tistory_ready": True,
+                "html_path": f"{stage_input.slug}/tistory.html",
                 "content_path": f"{stage_input.slug}/final.md",
+                "diagrams_rendered": rendered_count,
             },
         )
 
