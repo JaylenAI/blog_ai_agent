@@ -1,8 +1,11 @@
+import asyncio
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
+from app.claude.client import ClaudeClient
+from app.db.session import async_session_factory
 from app.dependencies import get_pipeline_service
 from app.schemas.common import ApiResponse
 from app.schemas.pipeline import (
@@ -12,10 +15,25 @@ from app.schemas.pipeline import (
     ValidationSummary,
 )
 from app.services.pipeline_service import PipelineService
+from app.utils.file_manager import FileManager
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
 _SUCCESS_EVENT_TYPES = {"pipeline_complete", "gate_pending"}
+
+_background_tasks: set[asyncio.Task] = set()
+
+
+def _event_to_dict(event) -> dict:
+    return {
+        "event_type": event.event_type,
+        "stage": event.stage,
+        "message": event.message,
+        "data": event.data,
+    }
 
 
 def _collect_result(
@@ -45,12 +63,7 @@ async def start_pipeline(
     ):
         if run_id is None and event.data.get("run_id") is not None:
             run_id = event.data["run_id"]
-        events.append({
-            "event_type": event.event_type,
-            "stage": event.stage,
-            "message": event.message,
-            "data": event.data,
-        })
+        events.append(_event_to_dict(event))
 
     return _collect_result(events, run_id=run_id)
 
@@ -62,12 +75,7 @@ async def approve_gate(
 ) -> ApiResponse[dict]:
     events = []
     async for event in service.resume_pipeline(run_id):
-        events.append({
-            "event_type": event.event_type,
-            "stage": event.stage,
-            "message": event.message,
-            "data": event.data,
-        })
+        events.append(_event_to_dict(event))
 
     return _collect_result(events)
 
@@ -79,6 +87,18 @@ async def reject_gate(
 ) -> ApiResponse[dict]:
     try:
         await service.reject_pipeline(run_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return ApiResponse(success=True, data={"status": "cancelled"})
+
+
+@router.post("/runs/{run_id}/cancel")
+async def cancel_run(
+    run_id: int,
+    service: PipelineService = Depends(get_pipeline_service),
+) -> ApiResponse[dict]:
+    try:
+        await service.cancel_run(run_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return ApiResponse(success=True, data={"status": "cancelled"})
@@ -148,43 +168,106 @@ async def get_run(
     )
 
 
+async def _run_pipeline_in_background(
+    queue: asyncio.Queue,
+    article_id: int,
+    *,
+    auto_gate_one: bool = False,
+) -> None:
+    async with async_session_factory() as session:
+        try:
+            service = PipelineService(
+                session, ClaudeClient(), FileManager()
+            )
+            async for event in service.start_pipeline(
+                article_id, auto_gate_one=auto_gate_one
+            ):
+                await queue.put(_event_to_dict(event))
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            logger.error("파이프라인 백그라운드 실행 실패: %s", e, exc_info=True)
+            await queue.put({
+                "event_type": "pipeline_error",
+                "stage": "system",
+                "message": str(e),
+                "data": {},
+            })
+        finally:
+            await queue.put(None)
+
+
+async def _resume_pipeline_in_background(
+    queue: asyncio.Queue,
+    run_id: int,
+) -> None:
+    async with async_session_factory() as session:
+        try:
+            service = PipelineService(
+                session, ClaudeClient(), FileManager()
+            )
+            async for event in service.resume_pipeline(run_id):
+                await queue.put(_event_to_dict(event))
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            logger.error("파이프라인 재개 실패: %s", e, exc_info=True)
+            await queue.put({
+                "event_type": "pipeline_error",
+                "stage": "system",
+                "message": str(e),
+                "data": {},
+            })
+        finally:
+            await queue.put(None)
+
+
+def _sse_from_queue(queue: asyncio.Queue) -> EventSourceResponse:
+    async def event_generator():
+        try:
+            while True:
+                event_dict = await queue.get()
+                if event_dict is None:
+                    break
+                yield {
+                    "event": event_dict["event_type"],
+                    "data": json.dumps(event_dict, ensure_ascii=False),
+                }
+        except asyncio.CancelledError:
+            pass
+
+    return EventSourceResponse(event_generator())
+
+
 @router.post("/start/stream")
 async def start_pipeline_stream(
     data: PipelineStartRequest,
-    service: PipelineService = Depends(get_pipeline_service),
 ) -> EventSourceResponse:
-    async def event_generator():
-        async for event in service.start_pipeline(
-            data.article_id, auto_gate_one=data.auto_gate_one
-        ):
-            yield {
-                "event": event.event_type,
-                "data": json.dumps({
-                    "event_type": event.event_type,
-                    "stage": event.stage,
-                    "message": event.message,
-                    "data": event.data,
-                }, ensure_ascii=False),
-            }
+    queue: asyncio.Queue = asyncio.Queue()
 
-    return EventSourceResponse(event_generator())
+    task = asyncio.create_task(
+        _run_pipeline_in_background(
+            queue,
+            data.article_id,
+            auto_gate_one=data.auto_gate_one,
+        )
+    )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+    return _sse_from_queue(queue)
 
 
 @router.post("/runs/{run_id}/approve/stream")
 async def approve_gate_stream(
     run_id: int,
-    service: PipelineService = Depends(get_pipeline_service),
 ) -> EventSourceResponse:
-    async def event_generator():
-        async for event in service.resume_pipeline(run_id):
-            yield {
-                "event": event.event_type,
-                "data": json.dumps({
-                    "event_type": event.event_type,
-                    "stage": event.stage,
-                    "message": event.message,
-                    "data": event.data,
-                }, ensure_ascii=False),
-            }
+    queue: asyncio.Queue = asyncio.Queue()
 
-    return EventSourceResponse(event_generator())
+    task = asyncio.create_task(
+        _resume_pipeline_in_background(queue, run_id)
+    )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+    return _sse_from_queue(queue)

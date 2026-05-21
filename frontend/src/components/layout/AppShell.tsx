@@ -8,6 +8,7 @@ import { api } from "../../api/client";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { Launcher } from "../editor/Launcher";
+import { ToastContainer } from "../common/ToastContainer";
 import type { Article } from "../../types/article";
 import type { PipelineEvent } from "../../types/pipeline";
 
@@ -32,6 +33,7 @@ export function AppShell() {
     addArticle,
     closeGateModal,
     setArticleContent,
+    addToast,
   } = useAppStore();
 
   const theme = useAppStore((s) => s.theme);
@@ -95,6 +97,7 @@ export function AppShell() {
         const msg = err instanceof Error ? err.message : "알 수 없는 오류";
         setError(msg);
         setPipelineMode("idle");
+        addToast({ type: "error", message: `글 생성 실패: ${msg}` });
       }
     },
     [
@@ -105,6 +108,7 @@ export function AppShell() {
       setArticleContent,
       startStream,
       refetch,
+      addToast,
     ],
   );
 
@@ -143,6 +147,8 @@ export function AppShell() {
           />
         )}
       </Suspense>
+
+      <ToastContainer />
     </div>
   );
 }

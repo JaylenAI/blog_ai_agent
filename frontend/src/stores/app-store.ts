@@ -10,6 +10,12 @@ interface GateModalState {
 type Theme = "light" | "dark";
 type Density = "compact" | "default" | "spacious";
 
+export interface Toast {
+  id: string;
+  type: "error" | "success" | "info";
+  message: string;
+}
+
 interface AppState {
   sidebarOpen: boolean;
   rightPanelOpen: boolean;
@@ -23,6 +29,7 @@ interface AppState {
   theme: Theme;
   density: Density;
   accentHue: number;
+  toasts: Toast[];
 
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
@@ -38,6 +45,8 @@ interface AppState {
   setTheme: (theme: Theme) => void;
   setDensity: (density: Density) => void;
   setAccentHue: (hue: number) => void;
+  addToast: (toast: Omit<Toast, "id">) => void;
+  removeToast: (id: string) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -53,6 +62,7 @@ export const useAppStore = create<AppState>((set) => ({
   theme: (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light") as Theme,
   density: "default" as Density,
   accentHue: 255,
+  toasts: [],
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
@@ -70,4 +80,10 @@ export const useAppStore = create<AppState>((set) => ({
   setTheme: (theme) => set({ theme }),
   setDensity: (density) => set({ density }),
   setAccentHue: (hue) => set({ accentHue: hue }),
+  addToast: (toast) =>
+    set((s) => ({
+      toasts: [...s.toasts, { ...toast, id: crypto.randomUUID() }],
+    })),
+  removeToast: (id) =>
+    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }));

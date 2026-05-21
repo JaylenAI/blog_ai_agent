@@ -13,7 +13,7 @@ export interface SSECallbacks {
 export function usePipelineSSE() {
   const abortRef = useRef<AbortController | null>(null);
   const { addEvent, setRunning, setError } = usePipelineStore();
-  const { setPipelineMode, openGateModal } = useAppStore();
+  const { setPipelineMode, openGateModal, addToast } = useAppStore();
 
   const handleEventType = useCallback(
     (event: PipelineEvent) => {
@@ -39,13 +39,19 @@ export function usePipelineSSE() {
           break;
         case "pipeline_complete":
           setPipelineMode("published");
+          addToast({ type: "success", message: "파이프라인 완료 — 발행 준비 됐습니다" });
           break;
         case "stage_error":
           setError(event.message);
+          addToast({ type: "error", message: `스테이지 오류: ${event.message}` });
+          break;
+        case "pipeline_error":
+          setError(event.message);
+          addToast({ type: "error", message: `파이프라인 오류: ${event.message}` });
           break;
       }
     },
-    [setPipelineMode, openGateModal, setError],
+    [setPipelineMode, openGateModal, setError, addToast],
   );
 
   const startStream = useCallback(
@@ -70,11 +76,14 @@ export function usePipelineSSE() {
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          const errorText = await response.text().catch(() => "");
+          throw new Error(
+            `서버 응답 오류 (${response.status}): ${errorText.slice(0, 200) || response.statusText}`,
+          );
         }
 
         const reader = response.body?.getReader();
-        if (!reader) throw new Error("No response body");
+        if (!reader) throw new Error("응답 스트림 없음");
 
         const decoder = new TextDecoder();
         let buffer = "";
@@ -112,13 +121,14 @@ export function usePipelineSSE() {
           const msg = err instanceof Error ? err.message : "스트리밍 오류";
           setError(msg);
           setPipelineMode("idle");
+          addToast({ type: "error", message: msg });
         }
       } finally {
         setRunning(false);
         abortRef.current = null;
       }
     },
-    [addEvent, setRunning, setError, setPipelineMode, handleEventType],
+    [addEvent, setRunning, setError, setPipelineMode, handleEventType, addToast],
   );
 
   const abort = useCallback(() => {
