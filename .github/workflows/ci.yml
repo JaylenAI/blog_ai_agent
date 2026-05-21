@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: backend
-        run: uv sync --frozen
+        run: uv sync --frozen --all-extras --all-groups
 
       - name: Lint
         working-directory: backend
