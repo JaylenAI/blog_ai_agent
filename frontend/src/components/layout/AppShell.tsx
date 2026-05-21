@@ -9,6 +9,7 @@ import { RightPanel } from "./RightPanel";
 import { Launcher } from "../editor/Launcher";
 import { Editor } from "../editor/Editor";
 import { GateModal } from "../gate/GateModal";
+import { PipelineProgress } from "../common/PipelineProgress";
 import type { Article } from "../../types/article";
 import type { PipelineEvent } from "../../types/pipeline";
 
@@ -103,6 +104,7 @@ export function AppShell() {
 
       <div className="flex flex-col flex-1 min-w-0">
         <Topbar />
+        <PipelineProgress />
 
         {error && (
           <div
