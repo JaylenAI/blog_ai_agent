@@ -32,14 +32,21 @@ class PipelineOrchestrator:
             topic=topic,
         )
 
+        first = True
         for stage in self._stages:
             pipeline_run.current_stage = PipelineStage(stage.name)
             await session.flush()
+
+            start_data: dict = {}
+            if first:
+                start_data["run_id"] = pipeline_run.id
+                first = False
 
             yield PipelineEvent(
                 event_type="stage_start",
                 stage=stage.name,
                 message=f"{stage.name} 스테이지 시작",
+                data=start_data,
             )
 
             try:
@@ -66,6 +73,18 @@ class PipelineOrchestrator:
                     event_type="stage_error",
                     stage=stage.name,
                     message=output.error,
+                )
+                return
+
+            if output.data.get("gate_pending"):
+                pipeline_run.status = PipelineStatus.PAUSED
+                await session.flush()
+
+                yield PipelineEvent(
+                    event_type="gate_pending",
+                    stage=stage.name,
+                    message=f"{stage.name} 사용자 검수 대기",
+                    data=output.data,
                 )
                 return
 

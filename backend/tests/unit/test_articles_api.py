@@ -1,4 +1,8 @@
+from unittest.mock import MagicMock
+
 from httpx import AsyncClient
+
+from app.dependencies import get_file_manager
 
 
 async def test_create_article(client: AsyncClient) -> None:
@@ -96,3 +100,38 @@ async def test_delete_article(client: AsyncClient) -> None:
 
     get_resp = await client.get(f"/api/v1/articles/{article_id}")
     assert get_resp.status_code == 404
+
+
+async def test_get_content_success(client: AsyncClient) -> None:
+    mock_fm = MagicMock()
+    mock_fm.read_text.return_value = "# 테스트 콘텐츠\n\n본문입니다."
+    client._transport.app.dependency_overrides[get_file_manager] = lambda: mock_fm
+
+    create_resp = await client.post(
+        "/api/v1/articles", json={"topic": "콘텐츠 테스트"}
+    )
+    article_id = create_resp.json()["data"]["id"]
+
+    response = await client.get(f"/api/v1/articles/{article_id}/content")
+    assert response.status_code == 200
+    assert "테스트 콘텐츠" in response.text
+    assert response.headers["content-type"].startswith("text/markdown")
+
+
+async def test_get_content_not_generated(client: AsyncClient) -> None:
+    mock_fm = MagicMock()
+    mock_fm.read_text.return_value = None
+    client._transport.app.dependency_overrides[get_file_manager] = lambda: mock_fm
+
+    create_resp = await client.post(
+        "/api/v1/articles", json={"topic": "미생성 콘텐츠"}
+    )
+    article_id = create_resp.json()["data"]["id"]
+
+    response = await client.get(f"/api/v1/articles/{article_id}/content")
+    assert response.status_code == 404
+
+
+async def test_get_content_article_not_found(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/articles/9999/content")
+    assert response.status_code == 404

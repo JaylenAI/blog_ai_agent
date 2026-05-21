@@ -23,6 +23,7 @@ class FileManager:
 
     def write_text(self, slug: str, filename: str, content: str) -> Path:
         path = self.article_dir(slug) / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
         logger.info("Wrote %s (%d bytes)", path, len(content))
         return path

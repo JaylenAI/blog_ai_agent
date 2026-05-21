@@ -125,6 +125,51 @@ async def test_pipeline_stops_on_failure() -> None:
     assert "researcher" not in stage_names
 
 
+async def test_gate_pending_pauses_pipeline() -> None:
+    gate = FakeStage(
+        "gate_one",
+        StageOutput(
+            stage_name="gate_one",
+            success=True,
+            data={"gate_pending": True, "outline": [{"heading": "1. 들어가며"}]},
+        ),
+    )
+    generator = FakeStage(
+        "generator",
+        StageOutput(stage_name="generator", success=True, data={}),
+    )
+
+    events = await _collect_events(PipelineOrchestrator([gate, generator]))
+
+    event_types = [e.event_type for e in events]
+    assert "gate_pending" in event_types
+    assert "pipeline_complete" not in event_types
+
+    started_stages = [e.stage for e in events if e.event_type == "stage_start"]
+    assert "generator" not in started_stages
+
+
+async def test_gate_not_pending_continues() -> None:
+    gate = FakeStage(
+        "gate_one",
+        StageOutput(
+            stage_name="gate_one",
+            success=True,
+            data={"outline": [{"heading": "1. 들어가며"}]},
+        ),
+    )
+    generator = FakeStage(
+        "generator",
+        StageOutput(stage_name="generator", success=True, data={"done": True}),
+    )
+
+    events = await _collect_events(PipelineOrchestrator([gate, generator]))
+
+    event_types = [e.event_type for e in events]
+    assert "gate_pending" not in event_types
+    assert "pipeline_complete" in event_types
+
+
 async def test_data_flows_between_stages() -> None:
     received_data: list[dict] = []
 

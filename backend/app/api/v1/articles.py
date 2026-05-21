@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import PlainTextResponse
 
-from app.dependencies import get_article_service
+from app.dependencies import get_article_service, get_file_manager
 from app.schemas.article import (
     ArticleCreate,
     ArticleListResponse,
@@ -9,6 +10,7 @@ from app.schemas.article import (
 )
 from app.schemas.common import ApiResponse
 from app.services.article_service import ArticleService
+from app.utils.file_manager import FileManager
 
 router = APIRouter()
 
@@ -71,6 +73,21 @@ async def update_article(
         success=True,
         data=ArticleResponse.model_validate(article),
     )
+
+
+@router.get("/{article_id}/content")
+async def get_article_content(
+    article_id: int,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> PlainTextResponse:
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    content = fm.read_text(article.slug, "final.md")
+    if content is None:
+        raise HTTPException(status_code=404, detail="Content not generated yet")
+    return PlainTextResponse(content, media_type="text/markdown; charset=utf-8")
 
 
 @router.delete("/{article_id}")

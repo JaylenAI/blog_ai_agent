@@ -1,0 +1,50 @@
+@theme {
+  /* ── Typography ── */
+  --font-sans: "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-serif: "Instrument Serif", Georgia, serif;
+
+  /* ── Geometry ── */
+  --sidebar-w: 260px;
+  --right-w: 360px;
+  --top-h: 44px;
+
+  --radius-xs: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  /* ── Density: Cozy (default) ── */
+  --row-h: 28px;
+  --gap: 8px;
+
+  /* ── Light mode colors ── */
+  --color-bg: #fbfbfa;
+  --color-bg-elev: #ffffff;
+  --color-bg-sub: #f4f4f2;
+  --color-bg-hover: #efeeeb;
+  --color-bg-active: #e9e8e4;
+  --color-border: #e8e8e5;
+  --color-text: #1f1e1b;
+  --color-text-muted: #6b6963;
+  --color-text-faint: #9c9a93;
+  --color-accent: oklch(55% 0.13 255);
+  --color-success: oklch(58% 0.12 150);
+  --color-warn: oklch(70% 0.14 70);
+  --color-danger: oklch(58% 0.18 25);
+}
+
+/* ── Dark mode overrides ── */
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-bg: #18181a;
+    --color-bg-elev: #1f1f22;
+    --color-bg-sub: #27272a;
+    --color-bg-hover: #2e2e32;
+    --color-bg-active: #3a3a3f;
+    --color-border: #333338;
+    --color-text: #ececea;
+    --color-text-muted: #a0a09a;
+    --color-text-faint: #6b6b65;
+    --color-accent: oklch(72% 0.13 255);
+  }
+}
