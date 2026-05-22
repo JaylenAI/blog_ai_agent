@@ -16,12 +16,13 @@ export interface Toast {
   message: string;
 }
 
-export type SidebarPanel = null | "pipelines" | "style-guide" | "tistory" | "subagents" | "skills" | "eval" | "mcp";
+export type SidebarPanel = null | "pipelines" | "style-guide" | "tistory" | "subagents" | "skills" | "eval" | "mcp" | "dashboard" | "settings";
+export type EditorMode = "view" | "edit";
 
 interface AppState {
   sidebarOpen: boolean;
   rightPanelOpen: boolean;
-  rightPanelTab: "pipeline" | "references" | "validation";
+  rightPanelTab: "pipeline" | "references" | "validation" | "history";
   activeArticle: Article | null;
   pipelineMode: PipelineMode;
   articles: Article[];
@@ -34,6 +35,8 @@ interface AppState {
   toasts: Toast[];
   sidebarPanel: SidebarPanel;
   publishKitOpen: boolean;
+  editorMode: EditorMode;
+  editDraft: string | null;
 
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
@@ -53,6 +56,8 @@ interface AppState {
   removeToast: (id: string) => void;
   setSidebarPanel: (panel: SidebarPanel) => void;
   setPublishKitOpen: (open: boolean) => void;
+  setEditorMode: (mode: EditorMode) => void;
+  setEditDraft: (draft: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -71,12 +76,14 @@ export const useAppStore = create<AppState>((set) => ({
   toasts: [],
   sidebarPanel: null,
   publishKitOpen: false,
+  editorMode: "view" as EditorMode,
+  editDraft: null as string | null,
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
   setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
   setActiveArticle: (article) =>
-    set({ activeArticle: article, articleContent: null }),
+    set({ activeArticle: article, articleContent: null, editorMode: "view" as EditorMode, editDraft: null }),
   setPipelineMode: (mode) => set({ pipelineMode: mode }),
   setArticles: (articles) => set({ articles }),
   addArticle: (article) =>
@@ -97,4 +104,6 @@ export const useAppStore = create<AppState>((set) => ({
   setSidebarPanel: (panel) =>
     set((s) => ({ sidebarPanel: s.sidebarPanel === panel ? null : panel })),
   setPublishKitOpen: (open) => set({ publishKitOpen: open }),
+  setEditorMode: (mode) => set({ editorMode: mode, editDraft: mode === "view" ? null : undefined }),
+  setEditDraft: (draft) => set({ editDraft: draft }),
 }));

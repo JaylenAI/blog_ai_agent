@@ -34,18 +34,19 @@ async def get_pipeline_repo(
     return PipelineRepository(db)
 
 
-async def get_article_service(
-    repo: ArticleRepository = Depends(get_article_repo),
-) -> ArticleService:
-    return ArticleService(repo)
-
-
 def get_claude_client() -> ClaudeClient:
     return ClaudeClient()
 
 
 def get_file_manager() -> FileManager:
     return FileManager()
+
+
+async def get_article_service(
+    repo: ArticleRepository = Depends(get_article_repo),
+    fm: FileManager = Depends(get_file_manager),
+) -> ArticleService:
+    return ArticleService(repo, fm)
 
 
 async def get_pipeline_service(

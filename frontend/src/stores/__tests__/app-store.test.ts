@@ -16,6 +16,8 @@ describe("useAppStore", () => {
       toasts: [],
       sidebarPanel: null,
       publishKitOpen: false,
+      editorMode: "view",
+      editDraft: null,
     });
   });
 
@@ -109,5 +111,23 @@ describe("useAppStore", () => {
     expect(useAppStore.getState().publishKitOpen).toBe(true);
     useAppStore.getState().setPublishKitOpen(false);
     expect(useAppStore.getState().publishKitOpen).toBe(false);
+  });
+
+  it("setEditorMode switches modes and clears draft on view", () => {
+    useAppStore.getState().setEditDraft("# hello");
+    useAppStore.getState().setEditorMode("edit");
+    expect(useAppStore.getState().editorMode).toBe("edit");
+    useAppStore.getState().setEditorMode("view");
+    expect(useAppStore.getState().editorMode).toBe("view");
+    expect(useAppStore.getState().editDraft).toBeNull();
+  });
+
+  it("setActiveArticle resets editor mode", () => {
+    useAppStore.getState().setEditorMode("edit");
+    useAppStore.getState().setEditDraft("# draft");
+    const article = { id: 1, slug: "test", topic: "test", status: "draft" } as any;
+    useAppStore.getState().setActiveArticle(article);
+    expect(useAppStore.getState().editorMode).toBe("view");
+    expect(useAppStore.getState().editDraft).toBeNull();
   });
 });

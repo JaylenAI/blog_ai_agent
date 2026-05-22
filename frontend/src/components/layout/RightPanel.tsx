@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { api } from "../../api/client";
 import { useAppStore } from "../../stores/app-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
 import { Icons } from "../common/Icons";
@@ -56,11 +57,18 @@ export function RightPanel() {
         >
           <Icons.CheckCircle s={13} /> 검증
         </button>
+        <button
+          className={`rp-tab ${rightPanelTab === "history" ? "active" : ""}`}
+          onClick={() => setRightPanelTab("history")}
+        >
+          <Icons.Layers s={13} /> 히스토리
+        </button>
       </div>
       <div className="rp-body">
         {rightPanelTab === "pipeline" && <PipelineTab />}
         {rightPanelTab === "references" && <ReferencesTab />}
         {rightPanelTab === "validation" && <ValidationTab />}
+        {rightPanelTab === "history" && <HistoryTab />}
       </div>
     </aside>
   );
@@ -491,6 +499,114 @@ function ValidationTab() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+interface VersionEntry {
+  version_id: string;
+  timestamp: string;
+  size: number;
+  word_count: number;
+}
+
+function HistoryTab() {
+  const activeArticle = useAppStore((s) => s.activeArticle);
+  const setArticleContent = useAppStore((s) => s.setArticleContent);
+  const addToast = useAppStore((s) => s.addToast);
+  const [versions, setVersions] = useState<VersionEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [previewContent, setPreviewContent] = useState<string | null>(null);
+
+  const fetchVersions = useCallback(async () => {
+    if (!activeArticle) return;
+    setLoading(true);
+    try {
+      const res = await api.articles.listVersions(activeArticle.id);
+      if (res.success && res.data) {
+        setVersions(res.data as VersionEntry[]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [activeArticle]);
+
+  useEffect(() => {
+    void fetchVersions();
+  }, [fetchVersions]);
+
+  const handlePreview = useCallback(async (versionId: string) => {
+    if (!activeArticle) return;
+    if (previewId === versionId) {
+      setPreviewId(null);
+      setPreviewContent(null);
+      return;
+    }
+    const content = await api.articles.getVersionContent(activeArticle.id, versionId);
+    setPreviewId(versionId);
+    setPreviewContent(content);
+  }, [activeArticle, previewId]);
+
+  const handleRestore = useCallback(async (versionId: string) => {
+    if (!activeArticle) return;
+    try {
+      const res = await api.articles.restoreVersion(activeArticle.id, versionId);
+      if (res.success) {
+        const content = await api.articles.getContent(activeArticle.id);
+        if (content) setArticleContent(content);
+        addToast({ type: "success", message: "버전 복원 완료" });
+        void fetchVersions();
+      }
+    } catch {
+      addToast({ type: "error", message: "복원 실패" });
+    }
+  }, [activeArticle, setArticleContent, addToast, fetchVersions]);
+
+  if (!activeArticle) {
+    return <div className="empty">아티클을 선택해 주세요</div>;
+  }
+
+  if (loading) {
+    return <div className="empty">불러오는 중...</div>;
+  }
+
+  if (versions.length === 0) {
+    return <div className="empty">저장된 버전이 없습니다. 편집 후 저장하면 자동으로 백업됩니다.</div>;
+  }
+
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
+        총 <strong style={{ color: "var(--text)" }}>{versions.length}개</strong> 버전 (최대 10개 보관)
+      </div>
+      {versions.map((v) => (
+        <div key={v.version_id} className="history-row">
+          <div className="history-info">
+            <div className="history-time">{v.timestamp}</div>
+            <div className="history-meta">{v.word_count.toLocaleString()}자 · {(v.size / 1024).toFixed(1)}KB</div>
+          </div>
+          <div className="history-actions">
+            <button
+              className="history-btn"
+              onClick={() => handlePreview(v.version_id)}
+              title="미리보기"
+            >
+              <Icons.Eye s={11} />
+            </button>
+            <button
+              className="history-btn restore"
+              onClick={() => handleRestore(v.version_id)}
+              title="이 버전으로 복원"
+            >
+              복원
+            </button>
+          </div>
+          {previewId === v.version_id && previewContent && (
+            <pre className="history-preview">{previewContent.slice(0, 500)}...</pre>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

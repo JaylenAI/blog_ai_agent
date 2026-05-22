@@ -1,4 +1,6 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Article } from "../../types/article";
+import { api } from "../../api/client";
 import { useAppStore } from "../../stores/app-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
 import { MarkdownRenderer } from "./MarkdownRenderer";
@@ -27,12 +29,20 @@ interface OutlineSection {
 export function Editor({ article }: EditorProps) {
   const pipelineMode = useAppStore((s) => s.pipelineMode);
   const articleContent = useAppStore((s) => s.articleContent);
+  const editorMode = useAppStore((s) => s.editorMode);
+  const editDraft = useAppStore((s) => s.editDraft);
+  const setEditorMode = useAppStore((s) => s.setEditorMode);
+  const setEditDraft = useAppStore((s) => s.setEditDraft);
+  const setArticleContent = useAppStore((s) => s.setArticleContent);
+  const addToast = useAppStore((s) => s.addToast);
   const events = usePipelineStore((s) => s.events);
+  const [saving, setSaving] = useState(false);
 
   const modeLabel = MODE_LABELS[pipelineMode];
   const isEarlyStage =
     pipelineMode === "research" || pipelineMode === "outline";
   const hasContent = Boolean(articleContent);
+  const isEditing = editorMode === "edit";
 
   const outlineEvent = events.find(
     (e) => e.event_type === "gate_pending" && e.stage === "gate_one",
@@ -70,6 +80,45 @@ export function Editor({ article }: EditorProps) {
     )
     .pop();
 
+  const handleEdit = useCallback(() => {
+    setEditDraft(articleContent ?? "");
+    setEditorMode("edit");
+  }, [articleContent, setEditDraft, setEditorMode]);
+
+  const handleCancel = useCallback(() => {
+    setEditorMode("view");
+  }, [setEditorMode]);
+
+  const handleSave = useCallback(async () => {
+    if (editDraft == null) return;
+    setSaving(true);
+    try {
+      const res = await api.articles.updateContent(article.id, editDraft);
+      if (res.success) {
+        setArticleContent(editDraft);
+        setEditorMode("view");
+        addToast({ type: "success", message: "저장 완료" });
+      }
+    } catch {
+      addToast({ type: "error", message: "저장 실패" });
+    } finally {
+      setSaving(false);
+    }
+  }, [editDraft, article.id, setArticleContent, setEditorMode, addToast]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "s" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        void handleSave();
+      }
+      if (e.key === "Escape") handleCancel();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isEditing, handleSave, handleCancel]);
+
   return (
     <div className="editor">
       <div className="cover" />
@@ -90,6 +139,28 @@ export function Editor({ article }: EditorProps) {
         <span>이미지 {article.image_count}장</span>
         <span>·</span>
         <span>편당 비용 $0</span>
+
+        {hasContent && !isEditing && (
+          <button className="editor-edit-btn" onClick={handleEdit}>
+            <Icons.Doc s={12} /> 편집
+          </button>
+        )}
+        {isEditing && (
+          <div className="editor-edit-actions">
+            <button className="editor-cancel-btn" onClick={handleCancel}>
+              취소
+            </button>
+            <button
+              className="editor-save-btn"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              <Icons.Check s={12} w={2} />
+              {saving ? "저장 중..." : "저장"}
+            </button>
+            <span className="editor-shortcut">⌘S</span>
+          </div>
+        )}
       </div>
 
       <h1 className="editor-title">
@@ -142,7 +213,13 @@ export function Editor({ article }: EditorProps) {
         </div>
       )}
 
-      {hasContent ? (
+      {isEditing && editDraft != null ? (
+        <MarkdownEditor
+          value={editDraft}
+          onChange={setEditDraft}
+          articleId={article.id}
+        />
+      ) : hasContent ? (
         <MarkdownRenderer content={articleContent!} articleId={article.id} />
       ) : isEarlyStage ? (
         <EarlyStageSections outline={outline} />
@@ -153,6 +230,61 @@ export function Editor({ article }: EditorProps) {
           activeSectionNum={activeSectionNum}
         />
       )}
+    </div>
+  );
+}
+
+function MarkdownEditor({
+  value,
+  onChange,
+  articleId,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  articleId: number;
+}) {
+  const [splitView, setSplitView] = useState(true);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  return (
+    <div className="md-editor">
+      <div className="md-editor-toolbar">
+        <button
+          className={`pk-view-btn ${splitView ? "active" : ""}`}
+          onClick={() => setSplitView(true)}
+        >
+          분할 보기
+        </button>
+        <button
+          className={`pk-view-btn ${!splitView ? "active" : ""}`}
+          onClick={() => setSplitView(false)}
+        >
+          편집만
+        </button>
+        <span className="md-editor-chars">
+          {value.replace(/\s/g, "").length.toLocaleString()}자
+        </span>
+      </div>
+      <div className={`md-editor-panes ${splitView ? "split" : "single"}`}>
+        <div className="md-editor-input">
+          <textarea
+            ref={textareaRef}
+            className="md-editor-textarea"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            spellCheck={false}
+          />
+        </div>
+        {splitView && (
+          <div className="md-editor-preview">
+            <MarkdownRenderer content={value} articleId={articleId} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -3,12 +3,14 @@ from collections.abc import Sequence
 from app.db.repositories.article_repo import ArticleRepository
 from app.models.article import Article, ArticleStatus
 from app.schemas.article import ArticleCreate, ArticleUpdate
+from app.utils.file_manager import FileManager
 from app.utils.slug import generate_slug
 
 
 class ArticleService:
-    def __init__(self, repo: ArticleRepository) -> None:
+    def __init__(self, repo: ArticleRepository, file_manager: FileManager | None = None) -> None:
         self._repo = repo
+        self._fm = file_manager
 
     async def create(self, data: ArticleCreate) -> Article:
         slug = generate_slug(data.topic)
@@ -60,5 +62,7 @@ class ArticleService:
         article = await self._repo.find_by_id(article_id)
         if not article:
             return False
+        if self._fm:
+            self._fm.delete_article_dir(article.slug)
         await self._repo.delete(article)
         return True

@@ -3,7 +3,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from app.pipeline.base import StageInput
-from app.pipeline.stages.s6_publisher import PublisherStage, _format_obsidian_note
+from app.pipeline.stages.s6_publisher import PublisherStage
+from app.services.obsidian_service import format_obsidian_note as _format_obsidian_note
 
 MOCK_CONTENT = "# AI란 무엇인가?\n\n## 1. 들어가며\n\n본문입니다."
 

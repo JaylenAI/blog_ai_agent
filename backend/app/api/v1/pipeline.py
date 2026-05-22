@@ -312,6 +312,40 @@ async def start_pipeline_stream(
     return _sse_from_queue(queue)
 
 
+@router.post("/validate-only/stream")
+async def validate_only_stream(
+    data: dict,
+) -> EventSourceResponse:
+    article_id = data.get("article_id")
+    if not article_id:
+        raise HTTPException(status_code=400, detail="article_id is required")
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def _validate_bg(q: asyncio.Queue, aid: int) -> None:
+        async with async_session_factory() as session:
+            try:
+                svc = PipelineService(session, ClaudeClient(), FileManager())
+                async for event in svc.validate_only(aid):
+                    await q.put(_event_to_dict(event))
+                await session.commit()
+            except Exception as e:
+                await session.rollback()
+                logger.error("재검증 실패: %s", e, exc_info=True)
+                await q.put({
+                    "event_type": "pipeline_error",
+                    "stage": "system",
+                    "message": str(e),
+                    "data": {},
+                })
+            finally:
+                await q.put(None)
+
+    task = asyncio.create_task(_validate_bg(queue, article_id))
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return _sse_from_queue(queue)
+
+
 @router.post("/runs/{run_id}/approve/stream")
 async def approve_gate_stream(
     run_id: int,

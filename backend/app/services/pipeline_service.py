@@ -205,6 +205,35 @@ class PipelineService:
 
         await self._save_validations(new_run.id, article.slug)
 
+    async def validate_only(
+        self, article_id: int
+    ) -> AsyncGenerator[PipelineEvent, None]:
+        article = await self._article_repo.find_by_id(article_id)
+        if not article:
+            yield PipelineEvent(
+                event_type="pipeline_error",
+                stage="validate",
+                message="아티클을 찾을 수 없습니다",
+            )
+            return
+
+        pipeline_run = PipelineRun(article_id=article.id)
+        pipeline_run = await self._pipeline_repo.create(pipeline_run)
+
+        stages: list[Stage] = [ValidatorStage(self._claude, self._fm)]
+        orchestrator = PipelineOrchestrator(stages)
+
+        async for event in orchestrator.execute(
+            pipeline_run=pipeline_run,
+            topic=article.topic,
+            slug=article.slug,
+            format_id=article.format_id,
+            session=self._session,
+        ):
+            yield event
+
+        await self._save_validations(pipeline_run.id, article.slug)
+
     async def get_validations(
         self, run_id: int
     ) -> Sequence[Validation]:

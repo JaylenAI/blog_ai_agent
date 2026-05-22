@@ -68,3 +68,87 @@ def test_list_files(tmp_path: Path) -> None:
 def test_list_files_empty(tmp_path: Path) -> None:
     fm = _make_manager(tmp_path)
     assert fm.list_files("nonexistent") == []
+
+
+def test_delete_article_dir(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    fm.write_text("del-slug", "final.md", "content")
+    assert (tmp_path / "del-slug").exists()
+    assert fm.delete_article_dir("del-slug") is True
+    assert not (tmp_path / "del-slug").exists()
+
+
+def test_delete_article_dir_nonexistent(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    assert fm.delete_article_dir("nonexistent") is False
+
+
+def test_backup_content(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    fm.write_text("slug", "final.md", "# v1")
+    version_id = fm.backup_content("slug")
+    assert version_id is not None
+    versions = fm.list_versions("slug")
+    assert len(versions) == 1
+    assert versions[0]["version_id"] == version_id
+
+
+def test_backup_content_max_versions(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    fm.write_text("slug", "final.md", "content")
+
+    import time
+    ids = []
+    for _ in range(12):
+        vid = fm.backup_content("slug", max_versions=10)
+        ids.append(vid)
+        time.sleep(0.002)
+
+    versions = fm.list_versions("slug")
+    assert len(versions) == 10
+
+
+def test_backup_content_no_final(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    assert fm.backup_content("empty-slug") is None
+
+
+def test_get_version_content(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    fm.write_text("slug", "final.md", "# version content")
+    vid = fm.backup_content("slug")
+    content = fm.get_version_content("slug", vid)
+    assert content == "# version content"
+
+
+def test_get_version_content_nonexistent(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    assert fm.get_version_content("slug", "99999") is None
+
+
+def test_restore_version(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    fm.write_text("slug", "final.md", "# v1 original")
+    vid = fm.backup_content("slug")
+
+    fm.write_text("slug", "final.md", "# v2 modified")
+    assert fm.restore_version("slug", vid) is True
+    restored = fm.read_text("slug", "final.md")
+    assert restored == "# v1 original"
+
+
+def test_restore_version_nonexistent(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    assert fm.restore_version("slug", "99999") is False
+
+
+def test_list_versions_empty(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    assert fm.list_versions("no-versions") == []
+
+
+def test_diagrams_dir(tmp_path: Path) -> None:
+    fm = _make_manager(tmp_path)
+    path = fm.diagrams_dir("slug")
+    assert path.exists()
+    assert path.name == "diagrams"

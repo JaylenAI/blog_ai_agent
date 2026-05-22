@@ -16,6 +16,7 @@ class ArticleUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=200)
     category: str | None = Field(default=None, max_length=100)
     status: ArticleStatus | None = None
+    word_count: int | None = None
 
 
 class ArticleResponse(BaseModel):

@@ -93,6 +93,27 @@ async def get_article_content(
     return PlainTextResponse(content, media_type="text/markdown; charset=utf-8")
 
 
+@router.put("/{article_id}/content")
+async def update_article_content(
+    article_id: int,
+    body: dict,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> ApiResponse[dict]:
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    content = body.get("content", "")
+    if not content:
+        raise HTTPException(status_code=400, detail="Content is required")
+    fm.backup_content(article.slug)
+    fm.write_text(article.slug, "final.md", content)
+    word_count = len(content.replace(" ", "").replace("\n", ""))
+    article.word_count = word_count
+    await service.update(article_id, ArticleUpdate(word_count=word_count))
+    return ApiResponse(success=True, data={"word_count": word_count})
+
+
 @router.get("/{article_id}/html")
 async def get_article_html(
     article_id: int,
@@ -226,3 +247,71 @@ async def delete_article(
     if not deleted:
         raise HTTPException(status_code=404, detail="Article not found")
     return ApiResponse(success=True, data={"deleted": True})
+
+
+@router.get("/{article_id}/versions")
+async def list_versions(
+    article_id: int,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> ApiResponse[list[dict]]:
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    versions = fm.list_versions(article.slug)
+    return ApiResponse(success=True, data=versions)
+
+
+@router.get("/{article_id}/versions/{version_id}")
+async def get_version_content(
+    article_id: int,
+    version_id: str,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> PlainTextResponse:
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    content = fm.get_version_content(article.slug, version_id)
+    if content is None:
+        raise HTTPException(status_code=404, detail="Version not found")
+    return PlainTextResponse(content, media_type="text/markdown; charset=utf-8")
+
+
+@router.post("/{article_id}/versions/{version_id}/restore")
+async def restore_version(
+    article_id: int,
+    version_id: str,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> ApiResponse[dict]:
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    restored = fm.restore_version(article.slug, version_id)
+    if not restored:
+        raise HTTPException(status_code=404, detail="Version not found")
+    content = fm.read_text(article.slug, "final.md")
+    word_count = len(content.replace(" ", "").replace("\n", "")) if content else 0
+    await service.update(article_id, ArticleUpdate(word_count=word_count))
+    return ApiResponse(success=True, data={"restored": True, "word_count": word_count})
+
+
+@router.post("/{article_id}/save-obsidian")
+async def save_to_obsidian(
+    article_id: int,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> ApiResponse[dict]:
+    from app.config import settings
+    from app.services.obsidian_service import ObsidianService
+
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    obsidian = ObsidianService(fm, settings.obsidian_vault_path)
+    result = obsidian.save_article(article.slug)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result.get("error", "저장 실패"))
+    return ApiResponse(success=True, data=result)

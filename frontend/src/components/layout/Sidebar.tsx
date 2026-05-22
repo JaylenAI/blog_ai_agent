@@ -1,19 +1,37 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { api } from "../../api/client";
 import { useAppStore } from "../../stores/app-store";
 import type { SidebarPanel } from "../../stores/app-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
+import { ConfirmModal } from "../common/ConfirmModal";
 import { Icons } from "../common/Icons";
 import type { Article } from "../../types/article";
 
 export function Sidebar() {
-  const { articles, activeArticle, setActiveArticle, setSidebarPanel } = useAppStore();
+  const { articles, activeArticle, setActiveArticle, setSidebarPanel, setArticles, addToast } = useAppStore();
   const events = usePipelineStore((s) => s.events);
   const [openDrafts, setOpenDrafts] = useState(true);
   const [openPub, setOpenPub] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Article | null>(null);
 
   const openPanel = (panel: NonNullable<SidebarPanel>) => setSidebarPanel(panel);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      const res = await api.articles.delete(deleteTarget.id);
+      if (res.success) {
+        setArticles(articles.filter((a) => a.id !== deleteTarget.id));
+        if (activeArticle?.id === deleteTarget.id) setActiveArticle(null);
+        addToast({ type: "success", message: `"${deleteTarget.title ?? deleteTarget.topic}" 삭제 완료` });
+      }
+    } catch {
+      addToast({ type: "error", message: "삭제 실패" });
+    }
+    setDeleteTarget(null);
+  }, [deleteTarget, articles, activeArticle, setArticles, setActiveArticle, addToast]);
 
   const filtered = searchQuery.trim()
     ? articles.filter((a) => {
@@ -94,6 +112,7 @@ export function Sidebar() {
                 article={d}
                 active={activeArticle?.id === d.id}
                 onClick={() => setActiveArticle(d)}
+                onDelete={() => setDeleteTarget(d)}
               />
             ))}
           <SbRow
@@ -112,6 +131,7 @@ export function Sidebar() {
                 article={p}
                 active={activeArticle?.id === p.id}
                 onClick={() => setActiveArticle(p)}
+                onDelete={() => setDeleteTarget(p)}
               />
             ))}
           <SbRow
@@ -120,6 +140,11 @@ export function Sidebar() {
             label="References"
             count={referenceCount > 0 ? referenceCount : undefined}
           />
+        </div>
+
+        <div className="sb-section">
+          <div className="sb-section-title">관리</div>
+          <SbRow icon={<Icons.Layers />} label="대시보드" onClick={() => openPanel("dashboard")} />
         </div>
 
         <div className="sb-section">
@@ -135,8 +160,20 @@ export function Sidebar() {
           <SbRow icon={<Icons.Hash />} label="STYLE.md" onClick={() => openPanel("style-guide")} />
           <SbRow icon={<Icons.Globe />} label="Tistory 연결" onClick={() => openPanel("tistory")} />
           <SbRow icon={<Icons.Cog />} label="MCP & API" onClick={() => openPanel("mcp")} />
+          <SbRow icon={<Icons.Cog />} label="종합 설정" onClick={() => openPanel("settings")} />
         </div>
       </div>
+
+      {deleteTarget && (
+        <ConfirmModal
+          title="아티클 삭제"
+          message={`"${deleteTarget.title ?? deleteTarget.topic}"을(를) 삭제하시겠습니까? 생성된 콘텐츠와 이미지가 모두 삭제됩니다.`}
+          confirmLabel="삭제"
+          variant="danger"
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
 
       <div className="sb-foot">
         <div className="avatar">JH</div>
@@ -194,16 +231,18 @@ function ArticleRow({
   article,
   active,
   onClick,
+  onDelete,
 }: {
   article: Article;
   active: boolean;
   onClick: () => void;
+  onDelete: () => void;
 }) {
   const isGenerating =
     article.status === "generating" || article.status === "researching";
 
   return (
-    <div onClick={onClick}>
+    <div className="article-row-wrap" onClick={onClick}>
       <SbRow
         indent={2}
         icon={<Icons.Doc />}
@@ -211,6 +250,16 @@ function ArticleRow({
         dot={isGenerating}
         active={active}
       />
+      <button
+        className="article-delete-btn"
+        title="삭제"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+      >
+        <Icons.X s={10} w={2} />
+      </button>
     </div>
   );
 }
