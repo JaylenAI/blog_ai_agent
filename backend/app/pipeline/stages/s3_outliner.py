@@ -1,5 +1,6 @@
 from app.claude.client import ClaudeClient
 from app.claude.prompts.outliner import OutlinerPrompt
+from app.formats import get_format_registry
 from app.pipeline.base import Stage, StageInput, StageOutput
 from app.utils.file_manager import FileManager
 from app.utils.logger import get_logger
@@ -23,6 +24,10 @@ class OutlinerStage(Stage):
         meta = self._fm.read_json(stage_input.slug, "meta.json") or {}
         refs_data = self._fm.read_json(stage_input.slug, "references.json") or []
 
+        format_id = meta.get("format_id", stage_input.format_id)
+        registry = get_format_registry()
+        format_spec = registry.get(format_id)
+
         refs_text = "\n".join(
             f"- [{r.get('title', 'N/A')}]({r.get('url', '')}): {r.get('summary', '')}"
             for r in refs_data
@@ -36,6 +41,7 @@ class OutlinerStage(Stage):
                     category=meta.get("category", ""),
                     target_audience=meta.get("target_audience", "intermediate"),
                     references=refs_text or "참고자료 없음",
+                    format_spec=format_spec,
                 )
             )
         except (RuntimeError, ValueError) as e:
@@ -57,9 +63,10 @@ class OutlinerStage(Stage):
         self._fm.write_json(stage_input.slug, "outline.json", result)
 
         logger.info(
-            "Outliner 완료: %d개 섹션, 예상 %d자",
+            "Outliner 완료: %d개 섹션, 예상 %d자, format=%s",
             result["total_sections"],
             result["estimated_total_words"],
+            format_id,
         )
 
         return StageOutput(stage_name=self.name, success=True, data=result)

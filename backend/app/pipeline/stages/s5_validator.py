@@ -2,6 +2,8 @@ import re
 
 from app.claude.client import ClaudeClient
 from app.claude.prompts.validator import ValidatorPrompt
+from app.formats import get_format_registry
+from app.formats.schema import FormatSpec
 from app.pipeline.base import Stage, StageInput, StageOutput
 from app.utils.file_manager import FileManager
 from app.utils.logger import get_logger
@@ -30,7 +32,11 @@ class ValidatorStage(Stage):
 
         meta = self._fm.read_json(stage_input.slug, "meta.json") or {}
 
-        rule_results = _run_rule_checks(content, meta)
+        format_id = meta.get("format_id", stage_input.format_id)
+        registry = get_format_registry()
+        format_spec = registry.get(format_id)
+
+        rule_results = _run_rule_checks(content, meta, format_spec)
 
         try:
             seo_keywords = ", ".join(meta.get("seo_keywords", []))
@@ -38,6 +44,7 @@ class ValidatorStage(Stage):
                 self._prompt.render(
                     content=content,
                     seo_keywords=seo_keywords or "키워드 없음",
+                    format_spec=format_spec,
                 )
             )
             claude_results = result.get("validations", [])
@@ -54,10 +61,11 @@ class ValidatorStage(Stage):
         self._fm.write_json(stage_input.slug, "critique.json", critique)
 
         logger.info(
-            "Validator 완료: %d/%d 통과 (%.0f%%)",
+            "Validator 완료: %d/%d 통과 (%.0f%%), format=%s",
             critique["summary"]["passed"],
             critique["summary"]["total"],
             critique["summary"]["score"] * 100,
+            format_id,
         )
 
         return StageOutput(
@@ -67,12 +75,14 @@ class ValidatorStage(Stage):
         )
 
 
-def _run_rule_checks(content: str, meta: dict) -> list[dict]:
+def _run_rule_checks(
+    content: str, meta: dict, format_spec: FormatSpec
+) -> list[dict]:
     return [
-        _check_char_count(content),
-        _check_section_count(content),
-        _check_intro_section(content),
-        _check_conclusion_section(content),
+        _check_char_count(content, format_spec),
+        _check_section_count(content, format_spec),
+        _check_intro_section(content, format_spec),
+        _check_conclusion_section(content, format_spec),
         _check_no_faq(content),
         _check_no_references_section(content),
         _check_html_tables(content),
@@ -81,49 +91,54 @@ def _run_rule_checks(content: str, meta: dict) -> list[dict]:
     ]
 
 
-def _check_char_count(content: str) -> dict:
+def _check_char_count(content: str, spec: FormatSpec) -> dict:
     count = len(content)
-    passed = 6000 <= count <= 13000
+    min_chars = spec.structure.char_count.standard[0]
+    max_chars = spec.structure.char_count.long[1]
+    passed = min_chars <= count <= max_chars
     return {
         "category": "style",
-        "item": "분량 검증 (6,000~13,000자)",
+        "item": f"분량 검증 ({min_chars:,}~{max_chars:,}자)",
         "passed": passed,
         "score": 1.0 if passed else 0.0,
         "message": f"{count:,}자" + ("" if passed else " — 범위 초과"),
     }
 
 
-def _check_section_count(content: str) -> dict:
+def _check_section_count(content: str, spec: FormatSpec) -> dict:
     count = content.count("## ")
-    passed = 7 <= count <= 12
+    sc = spec.structure.section_count
+    passed = sc.min <= count <= sc.max + 3
     return {
         "category": "style",
-        "item": "섹션 수 검증 (7~12개)",
+        "item": f"섹션 수 검증 ({sc.min}~{sc.max + 3}개)",
         "passed": passed,
         "score": 1.0 if passed else 0.0,
         "message": f"{count}개 섹션" + ("" if passed else " — 범위 초과"),
     }
 
 
-def _check_intro_section(content: str) -> dict:
-    passed = "들어가며" in content
+def _check_intro_section(content: str, spec: FormatSpec) -> dict:
+    keywords = spec.validation.intro_keywords
+    found = any(kw in content for kw in keywords)
     return {
         "category": "style",
-        "item": "들어가며 섹션 존재",
-        "passed": passed,
-        "score": 1.0 if passed else 0.0,
-        "message": "확인됨" if passed else "들어가며 섹션 없음",
+        "item": f"도입 섹션 존재 ({', '.join(keywords)})",
+        "passed": found,
+        "score": 1.0 if found else 0.0,
+        "message": "확인됨" if found else "도입 섹션 없음",
     }
 
 
-def _check_conclusion_section(content: str) -> dict:
-    passed = "마치며" in content
+def _check_conclusion_section(content: str, spec: FormatSpec) -> dict:
+    keywords = spec.validation.closing_keywords
+    found = any(kw in content for kw in keywords)
     return {
         "category": "style",
-        "item": "마치며 섹션 존재",
-        "passed": passed,
-        "score": 1.0 if passed else 0.0,
-        "message": "확인됨" if passed else "마치며 섹션 없음",
+        "item": f"마무리 섹션 존재 ({', '.join(keywords)})",
+        "passed": found,
+        "score": 1.0 if found else 0.0,
+        "message": "확인됨" if found else "마무리 섹션 없음",
     }
 
 

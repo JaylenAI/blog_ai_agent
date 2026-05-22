@@ -1,0 +1,73 @@
+id: architecture
+name: 아키텍처 설계형
+name_en: Architecture Design Guide
+description: 시스템 설계 의사결정과 인프라 구성을 다루는 형식
+icon: "\U0001F3D7️"
+
+structure:
+  intro_style: "설계 시 가장 먼저 결정해야 할 것 → 잘못된 설계의 대가 → 이 글에서 다루는 설계 범위"
+  closing_style: "설계 원칙 요약 → '좋은 설계는 ~이다' 철학 문장 → 체크리스트"
+  required_sections:
+    - "들어가며"
+    - "시스템 요구사항 분석"
+    - "아키텍처 구성도"
+    - "핵심 설계 결정"
+    - "규모별 구성 전략"
+    - "설계 체크리스트"
+    - "마치며"
+  optional_sections:
+    - "비용 분석"
+    - "장애 대응 전략"
+    - "마이그레이션 경로"
+  section_count:
+    min: 7
+    max: 10
+  char_count:
+    standard: [6000, 9000]
+    long: [10000, 14000]
+
+elements:
+  tables_min: 2
+  code_blocks: [2, 8]
+  diagram_types: ["architecture", "sequence", "deployment"]
+  expected_images: [3, 5]
+  use_metaphors: true
+  use_callout_boxes: true
+
+validation:
+  intro_keywords: ["들어가며"]
+  closing_keywords: ["마치며"]
+  forbidden_sections: ["FAQ", "참고 자료", "References"]
+
+seo:
+  title_max_chars: 60
+  tags_count: 10
+  title_patterns:
+    - "{system} 아키텍처 설계 가이드: 구성부터 운영까지"
+    - "{system} 인프라 설계: 규모별 구성 전략"
+
+prompt_instructions: |
+  이 글은 **아키텍처 설계형** 블로그입니다.
+  시스템 설계의 의사결정 과정과 근거를 체계적으로 전달합니다.
+
+  작성 핵심:
+  - Mermaid 다이어그램을 최소 2개 이상 사용하여 아키텍처를 시각화하세요.
+  - "왜 이 구조를 선택했는가"를 반드시 설명하세요. 대안과의 트레이드오프를 분석합니다.
+  - 규모별(소규모/중규모/대규모) 구성 차이를 표로 정리하세요.
+  - "설계 체크리스트"를 마지막에 체크박스 형태로 제공하세요.
+  - 설계 원칙(단일 책임, 느슨한 결합, 장애 격리 등)을 근거로 제시하세요.
+  - 마무리에 "좋은 ~ 설계는 ~가 아니라 ~입니다" 형태의 설계 철학 문장을 넣으세요.
+  - 코드보다 설계 사상 전달에 초점을 맞추세요.
+
+router_signals:
+  - "아키텍처"
+  - "설계"
+  - "인프라"
+  - "구성"
+  - "구조"
+  - "시스템"
+  - "이중화"
+  - "스케일"
+  - "아키텍쳐"
+  - "design"
+  - "infra"

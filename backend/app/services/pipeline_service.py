@@ -42,7 +42,11 @@ class PipelineService:
         self._validation_repo = ValidationRepository(session)
 
     async def start_pipeline(
-        self, article_id: int, *, auto_gate_one: bool = False
+        self,
+        article_id: int,
+        *,
+        auto_gate_one: bool = False,
+        format_id: str | None = None,
     ) -> AsyncGenerator[PipelineEvent, None]:
         article = await self._article_repo.find_by_id(article_id)
         if not article:
@@ -52,6 +56,8 @@ class PipelineService:
                 message=f"Article {article_id} not found",
             )
             return
+
+        resolved_format = format_id or article.format_id
 
         pipeline_run = PipelineRun(article_id=article.id)
         pipeline_run = await self._pipeline_repo.create(pipeline_run)
@@ -64,6 +70,7 @@ class PipelineService:
             pipeline_run=pipeline_run,
             topic=article.topic,
             slug=article.slug,
+            format_id=resolved_format,
             session=self._session,
         ):
             yield event
@@ -114,6 +121,7 @@ class PipelineService:
             pipeline_run=run,
             topic=article.topic,
             slug=article.slug,
+            format_id=article.format_id,
             session=self._session,
         ):
             yield event

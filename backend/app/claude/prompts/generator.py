@@ -1,15 +1,31 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from app.claude.prompts.base import PromptTemplate
+
+if TYPE_CHECKING:
+    from app.formats.schema import FormatSpec
 
 
 class GeneratorPrompt(PromptTemplate):
     def render(self, **kwargs: str) -> str:
+        format_spec: FormatSpec | None = kwargs.get("format_spec")
+        format_block = self._format_block(format_spec)
+
+        cc = format_spec.structure.char_count if format_spec else None
+        char_min = cc.standard[0] if cc else 6000
+        char_max = cc.standard[1] if cc else 8000
+
         return f"""[CONTEXT]
 당신은 기술 블로그 자동화 시스템의 Generator 에이전트입니다.
 아웃라인에 따라 고품질 한국어 기술 블로그 글을 작성합니다.
 
+{format_block}
+
 [STYLE RULES]
 - 톤: 격식체 100% (~합니다, ~입니다)
-- 분량: 6,000~8,000자
+- 분량: {char_min:,}~{char_max:,}자
 - 표: 반드시 HTML <table> 태그 사용 (마크다운 파이프 표기 금지)
 - 코드 블록: 언어 명시 (```python, ```javascript 등)
 - 다이어그램: Mermaid 코드 블록으로 포함 (```mermaid)

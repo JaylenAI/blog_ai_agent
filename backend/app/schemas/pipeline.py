@@ -21,6 +21,7 @@ class PipelineRunResponse(BaseModel):
 class PipelineStartRequest(BaseModel):
     article_id: int
     auto_gate_one: bool = False
+    format_id: str | None = None
 
 
 class ValidationResponse(BaseModel):

@@ -22,6 +22,7 @@ class PipelineOrchestrator:
         topic: str,
         slug: str,
         *,
+        format_id: str = "concept",
         session: AsyncSession,
     ) -> AsyncGenerator[PipelineEvent, None]:
         pipeline_run.status = PipelineStatus.RUNNING
@@ -32,6 +33,7 @@ class PipelineOrchestrator:
             article_id=pipeline_run.article_id,
             slug=slug,
             topic=topic,
+            format_id=format_id,
         )
 
         first = True
@@ -97,6 +99,7 @@ class PipelineOrchestrator:
                 article_id=pipeline_run.article_id,
                 slug=slug,
                 topic=topic,
+                format_id=format_id,
                 data=output.data,
             )
 

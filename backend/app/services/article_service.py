@@ -23,6 +23,7 @@ class ArticleService:
             title=data.title or data.topic,
             topic=data.topic,
             category=data.category,
+            format_id=data.format_id,
             status=ArticleStatus.DRAFT,
             content_path=f".sisyphus/{slug}",
         )

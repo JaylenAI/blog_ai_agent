@@ -9,6 +9,7 @@ class ArticleCreate(BaseModel):
     topic: str = Field(..., min_length=2, max_length=500)
     title: str = Field(default="", max_length=200)
     category: str = Field(default="", max_length=100)
+    format_id: str = Field(default="concept", max_length=50)
 
 
 class ArticleUpdate(BaseModel):
@@ -25,6 +26,7 @@ class ArticleResponse(BaseModel):
     title: str
     topic: str
     category: str
+    format_id: str
     status: ArticleStatus
     content_path: str
     word_count: int

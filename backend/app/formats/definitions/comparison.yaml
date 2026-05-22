@@ -1,0 +1,70 @@
+id: comparison
+name: 비교 분석형
+name_en: Comparison Analysis
+description: 두 가지 이상의 기술/도구를 객관적으로 비교 분석하는 형식
+icon: "⚖️"
+
+structure:
+  intro_style: "~를 선택해야 하는 상황에서 어떤 기준으로 골라야 할까? → 비교 대상과 기준 제시"
+  closing_style: "종합 비교표 → 상황별 추천 매트릭스 → 필자의 선택과 그 이유"
+  required_sections:
+    - "들어가며"
+    - "비교 대상 소개"
+    - "핵심 차이점"
+    - "성능 및 기능 비교"
+    - "상황별 추천"
+    - "종합 비교표"
+    - "마치며"
+  optional_sections:
+    - "실무 사용 사례"
+    - "마이그레이션 가이드"
+  section_count:
+    min: 7
+    max: 9
+  char_count:
+    standard: [5000, 7000]
+    long: [8000, 11000]
+
+elements:
+  tables_min: 3
+  code_blocks: [2, 6]
+  diagram_types: ["comparison", "architecture"]
+  expected_images: [2, 4]
+  use_metaphors: true
+  use_callout_boxes: true
+
+validation:
+  intro_keywords: ["들어가며"]
+  closing_keywords: ["마치며"]
+  forbidden_sections: ["FAQ", "참고 자료", "References"]
+
+seo:
+  title_max_chars: 60
+  tags_count: 10
+  title_patterns:
+    - "{A} vs {B}: 핵심 차이점과 선택 기준"
+    - "{A}와 {B} 완벽 비교: 어떤 상황에 무엇을 선택할까"
+
+prompt_instructions: |
+  이 글은 **비교 분석형** 블로그입니다.
+  두 가지 이상의 기술/도구를 객관적이고 공정하게 비교합니다.
+
+  작성 핵심:
+  - 대칭 구조를 유지하세요. A에 대해 설명한 관점을 B에도 동일하게 적용합니다.
+  - 비교 항목(성능, 학습 곡선, 커뮤니티, 가격 등)을 일관된 기준으로 평가하세요.
+  - 비교표(HTML <table>)를 최소 3개 이상 배치하세요. 이것이 글의 핵심 가치입니다.
+  - "어떤 것이 더 좋다"보다 "어떤 상황에 무엇이 적합한가"를 중심으로 서술하세요.
+  - 종합 비교표는 마지막에 전체 항목을 한 번에 정리하세요.
+  - "상황별 추천" 섹션에서 독자가 자신의 상황에 맞는 선택을 할 수 있도록 안내하세요.
+  - 편향 없이 양쪽의 장단점을 균형 있게 다루세요.
+
+router_signals:
+  - "vs"
+  - "비교"
+  - "차이"
+  - "어떤 것"
+  - "선택"
+  - "대 "
+  - "versus"
+  - "뭐가 나"
+  - "장단점"

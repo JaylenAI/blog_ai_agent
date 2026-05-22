@@ -1,0 +1,71 @@
+id: review
+name: 도구 체험기형
+name_en: Tool Review
+description: 새로운 도구나 서비스를 직접 써보고 솔직하게 리뷰하는 형식
+icon: "\U0001F50D"
+
+structure:
+  intro_style: "'직접 써보고 나서야 알게 된 것들' → 이 도구를 테스트하게 된 계기 → 리뷰 범위"
+  closing_style: "장단점 요약표 → 추천/비추천 판정 → 대안 도구 간략 소개"
+  required_sections:
+    - "들어가며"
+    - "도구 소개"
+    - "설치 및 시작"
+    - "실제 사용 경험"
+    - "장점과 한계"
+    - "총평 및 추천"
+    - "마치며"
+  optional_sections:
+    - "대안 도구 비교"
+    - "팀 도입 가이드"
+  section_count:
+    min: 7
+    max: 9
+  char_count:
+    standard: [5000, 8000]
+    long: [8000, 12000]
+
+elements:
+  tables_min: 2
+  code_blocks: [3, 8]
+  diagram_types: ["architecture"]
+  expected_images: [3, 5]
+  use_metaphors: true
+  use_callout_boxes: true
+
+validation:
+  intro_keywords: ["들어가며"]
+  closing_keywords: ["마치며"]
+  forbidden_sections: ["FAQ", "참고 자료", "References"]
+
+seo:
+  title_max_chars: 60
+  tags_count: 10
+  title_patterns:
+    - "{tool} 리뷰: 직접 써본 솔직한 후기"
+    - "{tool} 사용기: 설치부터 실전 활용까지"
+
+prompt_instructions: |
+  이 글은 **도구 체험기형** 블로그입니다.
+  특정 도구/서비스를 직접 사용해보고 솔직한 경험을 공유합니다.
+
+  작성 핵심:
+  - 1인칭 경험 서술을 사용하되, 격식체를 유지하세요 ("~해 보았습니다", "~를 확인했습니다").
+  - "설치 및 시작" 섹션에서 첫 실행까지의 과정을 코드 블록과 함께 보여주세요.
+  - "실제 사용 경험" 섹션이 글의 핵심입니다. 구체적인 사용 시나리오를 서술하세요.
+  - 장점은 구체적 사례와 함께, 한계는 실제 겪은 불편함으로 서술하세요.
+  - "총평 및 추천" 섹션에서 별점이나 점수 없이, 어떤 사용자에게 적합한지를 기준으로 판정하세요.
+  - 장단점 요약표(HTML <table>)를 반드시 포함하세요.
+  - 공식 문서 링크, GitHub 저장소 등 출처를 본문에 자연스럽게 포함하세요.
+
+router_signals:
+  - "리뷰"
+  - "사용기"
+  - "체험"
+  - "써보"
+  - "후기"
+  - "사용해"
+  - "경험"
+  - "도구"
+  - "review"
+  - "사용법"

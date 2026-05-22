@@ -1,6 +1,7 @@
 from app.claude.client import ClaudeClient
 from app.claude.prompts.generator import GeneratorPrompt
 from app.config import settings
+from app.formats import get_format_registry
 from app.images.image_generator import ImageGenerator
 from app.pipeline.base import Stage, StageInput, StageOutput
 from app.utils.file_manager import FileManager
@@ -50,6 +51,10 @@ class GeneratorStage(Stage):
 
         seo_keywords = ", ".join(meta.get("seo_keywords", []))
 
+        format_id = meta.get("format_id", stage_input.format_id)
+        registry = get_format_registry()
+        format_spec = registry.get(format_id)
+
         try:
             response = await self._claude.run(
                 self._prompt.render(
@@ -58,6 +63,7 @@ class GeneratorStage(Stage):
                     outline=outline_text,
                     references=refs_text or "참고자료 없음",
                     seo_keywords=seo_keywords or "키워드 없음",
+                    format_spec=format_spec,
                 )
             )
         except RuntimeError as e:

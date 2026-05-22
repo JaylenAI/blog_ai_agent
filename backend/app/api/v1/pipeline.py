@@ -59,7 +59,9 @@ async def start_pipeline(
     events = []
     run_id: int | None = None
     async for event in service.start_pipeline(
-        data.article_id, auto_gate_one=data.auto_gate_one
+        data.article_id,
+        auto_gate_one=data.auto_gate_one,
+        format_id=data.format_id,
     ):
         if run_id is None and event.data.get("run_id") is not None:
             run_id = event.data["run_id"]
@@ -173,6 +175,7 @@ async def _run_pipeline_in_background(
     article_id: int,
     *,
     auto_gate_one: bool = False,
+    format_id: str | None = None,
 ) -> None:
     async with async_session_factory() as session:
         try:
@@ -180,7 +183,9 @@ async def _run_pipeline_in_background(
                 session, ClaudeClient(), FileManager()
             )
             async for event in service.start_pipeline(
-                article_id, auto_gate_one=auto_gate_one
+                article_id,
+                auto_gate_one=auto_gate_one,
+                format_id=format_id,
             ):
                 await queue.put(_event_to_dict(event))
             await session.commit()
@@ -250,6 +255,7 @@ async def start_pipeline_stream(
             queue,
             data.article_id,
             auto_gate_one=data.auto_gate_one,
+            format_id=data.format_id,
         )
     )
     _background_tasks.add(task)

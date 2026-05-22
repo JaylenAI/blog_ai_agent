@@ -1,5 +1,14 @@
 from unittest.mock import AsyncMock, MagicMock
 
+from app.formats.schema import (
+    CharCountSpec,
+    ElementSpec,
+    FormatSpec,
+    RangeSpec,
+    SeoSpec,
+    StructureSpec,
+    ValidationSpec,
+)
 from app.pipeline.base import StageInput
 from app.pipeline.stages.s5_validator import (
     ValidatorStage,
@@ -32,6 +41,21 @@ MOCK_META = {
     "title": "AI란 무엇인가? — 개발자 가이드",
     "seo_keywords": ["AI", "인공지능", "머신러닝"],
 }
+
+DEFAULT_SPEC = FormatSpec(
+    id="concept",
+    name="개념 해설형",
+    structure=StructureSpec(
+        section_count=RangeSpec(min=7, max=9),
+        char_count=CharCountSpec(standard=(6000, 8000), long=(10000, 13000)),
+    ),
+    elements=ElementSpec(),
+    validation=ValidationSpec(
+        intro_keywords=["들어가며"],
+        closing_keywords=["마치며"],
+    ),
+    seo=SeoSpec(),
+)
 
 MOCK_CLAUDE_VALIDATIONS = {
     "validations": [
@@ -148,40 +172,40 @@ async def test_validator_combines_rule_and_claude() -> None:
 
 
 def test_check_char_count_pass() -> None:
-    result = _check_char_count("가" * 7000)
+    result = _check_char_count("가" * 7000, DEFAULT_SPEC)
     assert result["passed"] is True
 
 
 def test_check_char_count_too_short() -> None:
-    result = _check_char_count("가" * 100)
+    result = _check_char_count("가" * 100, DEFAULT_SPEC)
     assert result["passed"] is False
 
 
 def test_check_char_count_too_long() -> None:
-    result = _check_char_count("가" * 20000)
+    result = _check_char_count("가" * 20000, DEFAULT_SPEC)
     assert result["passed"] is False
 
 
 def test_check_section_count_pass() -> None:
     content = "\n".join(f"## Section {i}" for i in range(8))
-    result = _check_section_count(content)
+    result = _check_section_count(content, DEFAULT_SPEC)
     assert result["passed"] is True
 
 
 def test_check_section_count_too_few() -> None:
     content = "## Section 1\n## Section 2"
-    result = _check_section_count(content)
+    result = _check_section_count(content, DEFAULT_SPEC)
     assert result["passed"] is False
 
 
 def test_check_intro_section() -> None:
-    assert _check_intro_section("## 1. 들어가며\n본문")["passed"] is True
-    assert _check_intro_section("## 1. 소개\n본문")["passed"] is False
+    assert _check_intro_section("## 1. 들어가며\n본문", DEFAULT_SPEC)["passed"] is True
+    assert _check_intro_section("## 1. 소개\n본문", DEFAULT_SPEC)["passed"] is False
 
 
 def test_check_conclusion_section() -> None:
-    assert _check_conclusion_section("## 마치며\n결론")["passed"] is True
-    assert _check_conclusion_section("## 결론\n끝")["passed"] is False
+    assert _check_conclusion_section("## 마치며\n결론", DEFAULT_SPEC)["passed"] is True
+    assert _check_conclusion_section("## 결론\n끝", DEFAULT_SPEC)["passed"] is False
 
 
 def test_check_no_faq_pass() -> None:
@@ -259,5 +283,5 @@ def test_compute_summary_empty() -> None:
 
 
 def test_run_rule_checks_returns_nine() -> None:
-    results = _run_rule_checks(GOOD_CONTENT, MOCK_META)
+    results = _run_rule_checks(GOOD_CONTENT, MOCK_META, DEFAULT_SPEC)
     assert len(results) == 9

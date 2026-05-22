@@ -7,6 +7,7 @@ class StageInput:
     article_id: int
     slug: str
     topic: str
+    format_id: str = "concept"
     data: dict = field(default_factory=dict)
 
 

@@ -59,11 +59,11 @@ export function AppShell() {
   useRestorePipeline();
 
   const handleStart = useCallback(
-    async (topic: string, autoGateOne: boolean) => {
+    async (topic: string, autoGateOne: boolean, formatId: string) => {
       setPipelineMode("research");
 
       try {
-        const createRes = await api.articles.create(topic);
+        const createRes = await api.articles.create(topic, undefined, formatId);
         if (!createRes.success || !createRes.data) {
           throw new Error(createRes.error ?? "글 생성 실패");
         }
@@ -77,6 +77,7 @@ export function AppShell() {
             body: JSON.stringify({
               article_id: article.id,
               auto_gate_one: autoGateOne,
+              format_id: formatId,
             }),
           },
           {

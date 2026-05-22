@@ -11,6 +11,7 @@ from app.api.middleware.request_logger import RequestLoggerMiddleware
 from app.api.router import api_router
 from app.config import settings
 from app.db.engine import init_db
+from app.formats import get_format_registry
 from app.utils.logger import get_logger, setup_logging
 
 logger = get_logger(__name__)
@@ -22,7 +23,12 @@ _shutdown_event = asyncio.Event()
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging()
     await init_db()
-    logger.info("Blog AI Agent 시작 (port=%d)", settings.backend_port)
+    registry = get_format_registry()
+    logger.info(
+        "Blog AI Agent 시작 (port=%d, formats=%d)",
+        settings.backend_port,
+        len(registry.format_ids),
+    )
     yield
     logger.info("Blog AI Agent 종료")
     _shutdown_event.set()

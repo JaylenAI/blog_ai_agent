@@ -4,6 +4,7 @@ export interface Article {
   title: string | null;
   topic: string;
   category: string | null;
+  format_id: string;
   status: ArticleStatus;
   content_path: string | null;
   word_count: number;
@@ -29,6 +30,7 @@ export type ArticleStatus =
 export interface ArticleCreate {
   topic: string;
   title?: string;
+  format_id?: string;
 }
 
 export interface ApiResponse<T> {

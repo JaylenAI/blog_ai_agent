@@ -1,0 +1,73 @@
+id: tutorial
+name: 실습 튜토리얼형
+name_en: Hands-on Tutorial
+description: 단계별로 따라하며 직접 구축하는 실습 중심 형식
+icon: "\U0001F4DD"
+
+structure:
+  intro_style: "이 글을 따라하면 N분 안에 ~를 구축할 수 있습니다 → 필요한 사전 지식/환경 안내"
+  closing_style: "구축한 것 요약 → 다음 단계 제안 → 트러블슈팅 팁"
+  required_sections:
+    - "들어가며"
+    - "사전 준비"
+    - "설치 및 환경 설정"
+    - "핵심 구현"
+    - "동작 확인"
+    - "마치며"
+  optional_sections:
+    - "심화 설정"
+    - "트러블슈팅 가이드"
+    - "성능 최적화"
+  section_count:
+    min: 7
+    max: 10
+  char_count:
+    standard: [7000, 10000]
+    long: [12000, 15000]
+
+elements:
+  tables_min: 1
+  code_blocks: [8, 20]
+  diagram_types: ["architecture", "sequence"]
+  expected_images: [3, 5]
+  use_metaphors: false
+  use_callout_boxes: true
+
+validation:
+  intro_keywords: ["들어가며"]
+  closing_keywords: ["마치며"]
+  forbidden_sections: ["FAQ", "참고 자료", "References"]
+
+seo:
+  title_max_chars: 60
+  tags_count: 10
+  title_patterns:
+    - "{tool} 설치부터 배포까지: 실전 튜토리얼"
+    - "{tool}로 {goal} 구축하기: 단계별 가이드"
+
+prompt_instructions: |
+  이 글은 **실습 튜토리얼형** 블로그입니다.
+  독자가 처음부터 끝까지 따라하면 결과물을 얻을 수 있는 실습 가이드입니다.
+
+  작성 핵심:
+  - "사전 준비" 섹션에서 OS, 런타임 버전, 필요 도구를 명확히 나열하세요.
+  - 모든 명령어는 복사해서 바로 실행 가능해야 합니다. bash 코드 블록을 적극 사용하세요.
+  - 각 단계 후 "정상 실행 시 다음과 같은 출력을 확인할 수 있습니다" 형태로 결과를 보여주세요.
+  - 코드 블록 내 한국어 주석으로 각 줄의 역할을 설명하세요.
+  - YAML, Dockerfile, docker-compose 등 설정 파일은 전체를 보여주세요.
+  - 흔히 발생하는 에러와 해결법을 "주의" 콜아웃으로 중간중간 배치하세요.
+  - 최종 동작 확인 단계를 반드시 포함하세요 (curl, 브라우저 접속 등).
+  - Mermaid 시퀀스 다이어그램으로 시스템 간 통신 흐름을 보여주세요.
+
+router_signals:
+  - "구축"
+  - "설치"
+  - "배포"
+  - "만들기"
+  - "구현"
+  - "세팅"
+  - "셋업"
+  - "따라하"
+  - "실습"
+  - "튜토리얼"
+  - "step by step"

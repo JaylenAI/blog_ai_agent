@@ -1,0 +1,72 @@
+id: troubleshooting
+name: 트러블슈팅형
+name_en: Troubleshooting Guide
+description: 에러 해결과 디버깅 과정을 체계적으로 정리하는 형식
+icon: "\U0001F527"
+
+structure:
+  intro_style: "에러 메시지 직접 인용 → 이 에러를 만나는 전형적인 상황 설명"
+  closing_style: "해결법 요약 체크리스트 → 예방 팁 → 관련 에러 안내"
+  required_sections:
+    - "들어가며"
+    - "에러 증상"
+    - "원인 분석"
+    - "해결 방법"
+    - "예방 및 모니터링"
+    - "마치며"
+  optional_sections:
+    - "관련 에러 모음"
+    - "환경별 차이"
+  section_count:
+    min: 5
+    max: 8
+  char_count:
+    standard: [2000, 5000]
+    long: [5000, 8000]
+
+elements:
+  tables_min: 1
+  code_blocks: [3, 10]
+  diagram_types: ["flowchart"]
+  expected_images: [1, 3]
+  use_metaphors: false
+  use_callout_boxes: true
+
+validation:
+  intro_keywords: ["들어가며"]
+  closing_keywords: ["마치며"]
+  forbidden_sections: ["FAQ", "참고 자료", "References"]
+
+seo:
+  title_max_chars: 60
+  tags_count: 10
+  title_patterns:
+    - "{error} 에러 해결: 원인과 해결 방법 총정리"
+    - "{tool} {symptom} 문제 해결 가이드"
+
+prompt_instructions: |
+  이 글은 **트러블슈팅형** 블로그입니다.
+  특정 에러나 문제 상황의 원인을 분석하고 해결법을 제시합니다.
+
+  작성 핵심:
+  - 서두에 실제 에러 메시지를 코드 블록으로 인용하세요.
+  - "에러 증상" 섹션에서 이 에러가 발생하는 정확한 조건을 서술하세요.
+  - "원인 분석" 섹션에서 가능한 원인을 우선순위별로 나열하세요.
+  - "해결 방법" 섹션에서 각 원인별 해결 명령어/코드를 구체적으로 제시하세요.
+  - 각 해결법에 "확인 방법"을 반드시 포함하세요 (해결됐는지 어떻게 아는지).
+  - 글은 짧고 직관적이어야 합니다. 불필요한 배경 설명은 최소화하세요.
+  - "증상 → 원인 → 해결" 테이블(HTML <table>)을 제공하세요.
+  - Mermaid 플로우차트로 디버깅 의사결정 트리를 보여주세요.
+
+router_signals:
+  - "에러"
+  - "오류"
+  - "해결"
+  - "문제"
+  - "안될"
+  - "안되"
+  - "실패"
+  - "디버깅"
+  - "troubleshoot"
+  - "fix"
+  - "error"

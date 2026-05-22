@@ -1,4 +1,5 @@
 import type { ApiResponse, Article } from "../types/article";
+import type { BlogFormat, FormatSuggestion } from "../types/format";
 import type {
   PipelineEvent,
   PipelineRun,
@@ -32,10 +33,10 @@ export const api = {
         `/articles?page=${page}&limit=${limit}`,
       ),
     get: (id: number) => request<Article>(`/articles/${id}`),
-    create: (topic: string, title?: string) =>
+    create: (topic: string, title?: string, formatId?: string) =>
       request<Article>("/articles", {
         method: "POST",
-        body: JSON.stringify({ topic, title }),
+        body: JSON.stringify({ topic, title, format_id: formatId }),
       }),
     getContent: (id: number) => requestText(`/articles/${id}/content`),
     listImages: (id: number) =>
@@ -44,13 +45,22 @@ export const api = {
       `${BASE_URL}/articles/${id}/images/${encodeURIComponent(filename)}`,
   },
 
+  formats: {
+    list: () => request<BlogFormat[]>("/formats"),
+    suggest: (topic: string) =>
+      request<FormatSuggestion[]>(
+        `/formats/suggest?topic=${encodeURIComponent(topic)}`,
+      ),
+  },
+
   pipeline: {
-    start: (articleId: number, autoGateOne = false) =>
+    start: (articleId: number, autoGateOne = false, formatId?: string) =>
       request<{ events: PipelineEvent[]; run_id: number }>("/pipeline/start", {
         method: "POST",
         body: JSON.stringify({
           article_id: articleId,
           auto_gate_one: autoGateOne,
+          format_id: formatId,
         }),
       }),
     approve: (runId: number) =>

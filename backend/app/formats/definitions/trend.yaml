@@ -1,0 +1,73 @@
+id: trend
+name: 트렌드 분석형
+name_en: Trend Analysis
+description: 기술 동향과 산업 변화를 데이터 기반으로 분석하는 형식
+icon: "\U0001F4CA"
+
+structure:
+  intro_style: "최근 뉴스/데이터 인용으로 변화의 신호 제시 → 이 변화가 왜 중요한지 → 분석 범위"
+  closing_style: "핵심 트렌드 3줄 요약 → 한국 개발자 관점의 시사점 → 미래 전망"
+  required_sections:
+    - "들어가며"
+    - "현재 상황 분석"
+    - "핵심 트렌드"
+    - "주요 플레이어 동향"
+    - "한국 개발자 관점"
+    - "향후 전망"
+    - "마치며"
+  optional_sections:
+    - "데이터로 보는 변화"
+    - "실무 적용 전략"
+  section_count:
+    min: 7
+    max: 9
+  char_count:
+    standard: [5000, 7000]
+    long: [8000, 11000]
+
+elements:
+  tables_min: 2
+  code_blocks: [0, 3]
+  diagram_types: ["timeline", "comparison"]
+  expected_images: [2, 4]
+  use_metaphors: true
+  use_callout_boxes: true
+
+validation:
+  intro_keywords: ["들어가며"]
+  closing_keywords: ["마치며"]
+  forbidden_sections: ["FAQ", "참고 자료", "References"]
+
+seo:
+  title_max_chars: 60
+  tags_count: 10
+  title_patterns:
+    - "{topic} 트렌드 분석: 2026년 현황과 전망"
+    - "{topic} 산업 동향: 핵심 변화와 개발자 시사점"
+
+prompt_instructions: |
+  이 글은 **트렌드 분석형** 블로그입니다.
+  기술 동향과 산업 변화를 데이터 기반으로 분석하고 시사점을 제공합니다.
+
+  작성 핵심:
+  - 서두에 구체적 데이터/통계/뉴스를 인용하여 변화의 크기를 보여주세요.
+  - 코드블록보다 비교표, 타임라인, 시장 분석에 집중하세요.
+  - "주요 플레이어 동향" 섹션에서 기업별 전략을 표로 비교하세요.
+  - "한국 개발자 관점" 섹션을 반드시 포함하세요. 글로벌 트렌드의 국내 적용 가능성을 분석합니다.
+  - "향후 전망"에서 낙관론과 리스크를 균형 있게 제시하세요.
+  - 출처와 근거를 명시하여 신뢰도를 확보하세요.
+  - Mermaid 타임라인이나 비교 다이어그램을 활용하세요.
+  - 마무리에 "핵심 트렌드 3줄 요약"을 넣으세요.
+
+router_signals:
+  - "트렌드"
+  - "동향"
+  - "전망"
+  - "시장"
+  - "산업"
+  - "분석"
+  - "현황"
+  - "미래"
+  - "변화"
+  - "2026"
+  - "2025"

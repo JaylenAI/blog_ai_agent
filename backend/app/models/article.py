@@ -35,6 +35,7 @@ class Article(TimestampMixin, Base):
     status: Mapped[ArticleStatus] = mapped_column(
         Enum(ArticleStatus), default=ArticleStatus.DRAFT
     )
+    format_id: Mapped[str] = mapped_column(String(50), default="concept")
     content_path: Mapped[str] = mapped_column(String(500), default="")
     word_count: Mapped[int] = mapped_column(default=0)
     image_count: Mapped[int] = mapped_column(default=0)
