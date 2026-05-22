@@ -45,6 +45,21 @@ export const api = {
       `${BASE_URL}/articles/${id}/images/${encodeURIComponent(filename)}`,
   },
 
+  publishKit: {
+    get: (id: number) =>
+      request<{
+        title: string;
+        category: string;
+        tags: string[];
+        markdown: string | null;
+        html: string | null;
+        images: { name: string; url: string }[];
+        diagrams: { name: string; content: string }[];
+        word_count: number;
+        status: string;
+      }>(`/articles/${id}/publish-kit`),
+  },
+
   formats: {
     list: () => request<BlogFormat[]>("/formats"),
     suggest: (topic: string) =>

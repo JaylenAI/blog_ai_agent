@@ -2,6 +2,7 @@ import mimetypes
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse, Response
+from pydantic import BaseModel
 
 from app.dependencies import get_article_service, get_file_manager
 from app.schemas.article import (
@@ -105,6 +106,78 @@ async def get_article_html(
     if html is None:
         raise HTTPException(status_code=404, detail="HTML not generated yet")
     return ApiResponse(success=True, data=html)
+
+
+class PublishKitImage(BaseModel):
+    name: str
+    url: str
+
+
+class PublishKitDiagram(BaseModel):
+    name: str
+    content: str
+
+
+class PublishKit(BaseModel):
+    title: str
+    category: str
+    tags: list[str]
+    markdown: str | None
+    html: str | None
+    images: list[PublishKitImage]
+    diagrams: list[PublishKitDiagram]
+    word_count: int
+    status: str
+
+
+@router.get("/{article_id}/publish-kit")
+async def get_publish_kit(
+    article_id: int,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> ApiResponse[PublishKit]:
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    meta = fm.read_json(article.slug, "meta.json")
+    tags: list[str] = []
+    if isinstance(meta, dict):
+        tags = meta.get("seo_keywords", [])
+
+    markdown = fm.read_text(article.slug, "final.md")
+    html = fm.read_text(article.slug, "tistory.html")
+
+    images = [
+        PublishKitImage(
+            name=name,
+            url=f"/api/v1/articles/{article_id}/images/{name}",
+        )
+        for name in fm.list_images(article.slug)
+    ]
+
+    diagrams: list[PublishKitDiagram] = []
+    for name in fm.list_diagrams(article.slug):
+        content = fm.read_text(article.slug, f"diagrams/{name}")
+        if content:
+            diagrams.append(PublishKitDiagram(name=name, content=content))
+
+    word_count = len(markdown.replace(" ", "").replace("\n", "")) if markdown else 0
+
+    return ApiResponse(
+        success=True,
+        data=PublishKit(
+            title=article.title or article.topic,
+            category=article.category or (meta.get("category", "") if isinstance(meta, dict) else ""),
+            tags=tags,
+            markdown=markdown,
+            html=html,
+            images=images,
+            diagrams=diagrams,
+            word_count=word_count,
+            status=article.status.value,
+        ),
+    )
 
 
 @router.get("/{article_id}/images")

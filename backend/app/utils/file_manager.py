@@ -62,3 +62,17 @@ class FileManager:
             f.name for f in images.iterdir()
             if f.is_file() and f.suffix.lower() in suffixes
         )
+
+    def diagrams_dir(self, slug: str) -> Path:
+        path = self.article_dir(slug) / "diagrams"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def list_diagrams(self, slug: str) -> list[str]:
+        diagrams = self.article_dir(slug) / "diagrams"
+        if not diagrams.exists():
+            return []
+        return sorted(
+            f.name for f in diagrams.iterdir()
+            if f.is_file() and f.suffix.lower() == ".mmd"
+        )
