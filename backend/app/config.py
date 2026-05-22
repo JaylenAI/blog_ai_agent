@@ -28,6 +28,11 @@ class Settings(BaseSettings):
 
     stage_timeout: int = 600
 
+    image_generation_enabled: bool = True
+    image_generation_timeout: int = 120
+    max_images_per_article: int = 4
+    image_allowed_tools: str = "Write,Bash"
+
     @property
     def sisyphus_path(self) -> Path:
         return Path(self.sisyphus_dir)

@@ -38,6 +38,10 @@ export const api = {
         body: JSON.stringify({ topic, title }),
       }),
     getContent: (id: number) => requestText(`/articles/${id}/content`),
+    listImages: (id: number) =>
+      request<string[]>(`/articles/${id}/images`),
+    imageUrl: (id: number, filename: string) =>
+      `${BASE_URL}/articles/${id}/images/${encodeURIComponent(filename)}`,
   },
 
   pipeline: {

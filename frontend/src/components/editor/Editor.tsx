@@ -53,7 +53,7 @@ export function Editor({ article }: EditorProps) {
 
         {/* Content */}
         {articleContent ? (
-          <MarkdownRenderer content={articleContent} />
+          <MarkdownRenderer content={articleContent} articleId={article.id} />
         ) : pipelineMode === "idle" ? (
           <p style={{ color: "var(--color-text-muted)" }}>
             파이프라인을 시작하면 이 영역에 콘텐츠가 생성됩니다.
