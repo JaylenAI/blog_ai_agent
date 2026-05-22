@@ -52,3 +52,13 @@ class FileManager:
         if not path.exists():
             return []
         return sorted(f.name for f in path.iterdir() if f.is_file())
+
+    def list_images(self, slug: str) -> list[str]:
+        images = self.images_dir(slug)
+        if not images.exists():
+            return []
+        suffixes = {".png", ".svg", ".jpg", ".jpeg"}
+        return sorted(
+            f.name for f in images.iterdir()
+            if f.is_file() and f.suffix.lower() in suffixes
+        )

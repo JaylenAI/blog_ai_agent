@@ -1,5 +1,7 @@
 from app.claude.client import ClaudeClient
 from app.claude.prompts.generator import GeneratorPrompt
+from app.config import settings
+from app.images.image_generator import ImageGenerator
 from app.pipeline.base import Stage, StageInput, StageOutput
 from app.utils.file_manager import FileManager
 from app.utils.logger import get_logger
@@ -12,6 +14,11 @@ class GeneratorStage(Stage):
         self._claude = claude
         self._fm = file_manager
         self._prompt = GeneratorPrompt()
+        self._image_gen = (
+            ImageGenerator(claude, file_manager)
+            if settings.image_generation_enabled
+            else None
+        )
 
     @property
     def name(self) -> str:
@@ -80,11 +87,27 @@ class GeneratorStage(Stage):
                 stage_input.slug, f"diagrams/diagram_{i + 1}.mmd", diagram
             )
 
+        image_results: list[dict] = []
+        if self._image_gen:
+            try:
+                image_results = await self._image_gen.generate_all(
+                    stage_input.slug, content, stage_input.topic
+                )
+                successful = [r for r in image_results if r.get("success")]
+                if successful:
+                    content = _insert_image_references(content, successful)
+                    self._fm.write_text(stage_input.slug, "final.md", content)
+            except Exception as e:
+                logger.warning("이미지 생성 실패 (본문은 유지): %s", e)
+
+        image_count = sum(1 for r in image_results if r.get("success"))
+
         logger.info(
-            "Generator 완료: %d자, %d개 섹션, %d개 다이어그램",
+            "Generator 완료: %d자, %d개 섹션, %d개 다이어그램, %d개 이미지",
             char_count,
             section_count,
             len(diagrams),
+            image_count,
         )
 
         return StageOutput(
@@ -95,6 +118,7 @@ class GeneratorStage(Stage):
                 "word_count": char_count,
                 "section_count": section_count,
                 "diagram_count": len(diagrams),
+                "image_count": image_count,
             },
         )
 
@@ -115,3 +139,32 @@ def _extract_mermaid_blocks(content: str) -> list[str]:
             current.append(line)
 
     return blocks
+
+
+def _insert_image_references(content: str, image_results: list[dict]) -> str:
+    for img in image_results:
+        alt = img.get("alt", img["filename"])
+        ref = f"\n![{alt}](images/{img['filename']})\n"
+
+        heading = img.get("insert_after_heading", "")
+        if heading and heading in content:
+            idx = content.index(heading) + len(heading)
+            next_newline = content.find("\n", idx)
+            if next_newline != -1:
+                para_end = content.find("\n\n", next_newline + 1)
+                insert_pos = para_end if para_end != -1 else next_newline
+                content = content[:insert_pos] + "\n" + ref + content[insert_pos:]
+            else:
+                content = content + ref
+        else:
+            last_heading = content.rfind("\n## ")
+            if last_heading != -1:
+                para_end = content.find("\n\n", last_heading)
+                if para_end != -1:
+                    content = content[:para_end] + "\n" + ref + content[para_end:]
+                else:
+                    content = content + ref
+            else:
+                content = content + ref
+
+    return content

@@ -33,16 +33,35 @@ class ClaudeClient:
         self._timeout = timeout
         self._max_retries = max_retries
 
-    def _build_args(self, prompt: str) -> list[str]:
-        return [
+    def _build_args(
+        self,
+        prompt: str,
+        *,
+        allowed_tools: list[str] | None = None,
+        add_dir: str | None = None,
+    ) -> list[str]:
+        args = [
             self._cli_path,
             "-p", prompt,
             "--output-format", "stream-json",
             "--verbose",
         ]
+        if allowed_tools:
+            args.extend(["--allowedTools", ",".join(allowed_tools)])
+        if add_dir:
+            args.extend(["--add-dir", add_dir])
+        return args
 
-    async def _execute(self, prompt: str) -> ClaudeResponse:
-        args = self._build_args(prompt)
+    async def _execute(
+        self,
+        prompt: str,
+        *,
+        allowed_tools: list[str] | None = None,
+        add_dir: str | None = None,
+    ) -> ClaudeResponse:
+        args = self._build_args(
+            prompt, allowed_tools=allowed_tools, add_dir=add_dir
+        )
 
         process = await asyncio.create_subprocess_exec(
             *args,
@@ -87,7 +106,12 @@ class ClaudeClient:
         )
 
     async def run(
-        self, prompt: str, *, timeout: int | None = None
+        self,
+        prompt: str,
+        *,
+        timeout: int | None = None,
+        allowed_tools: list[str] | None = None,
+        add_dir: str | None = None,
     ) -> ClaudeResponse:
         logger.info("Claude CLI 실행: %s...", prompt[:80])
         saved_timeout = self._timeout
@@ -98,7 +122,11 @@ class ClaudeClient:
             last_error: Exception | None = None
             for attempt in range(self._max_retries + 1):
                 try:
-                    return await self._execute(prompt)
+                    return await self._execute(
+                        prompt,
+                        allowed_tools=allowed_tools,
+                        add_dir=add_dir,
+                    )
                 except TimeoutError:
                     last_error = TimeoutError(
                         f"Claude CLI 타임아웃 ({self._timeout}초)"
@@ -126,9 +154,19 @@ class ClaudeClient:
             self._timeout = saved_timeout
 
     async def run_json(
-        self, prompt: str, *, timeout: int | None = None
+        self,
+        prompt: str,
+        *,
+        timeout: int | None = None,
+        allowed_tools: list[str] | None = None,
+        add_dir: str | None = None,
     ) -> dict:
-        response = await self.run(prompt, timeout=timeout)
+        response = await self.run(
+            prompt,
+            timeout=timeout,
+            allowed_tools=allowed_tools,
+            add_dir=add_dir,
+        )
         return extract_json(response.text)
 
     async def stream(self, prompt: str) -> AsyncGenerator[StreamEvent, None]:

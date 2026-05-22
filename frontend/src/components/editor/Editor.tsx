@@ -143,7 +143,7 @@ export function Editor({ article }: EditorProps) {
       )}
 
       {hasContent ? (
-        <MarkdownRenderer content={articleContent!} />
+        <MarkdownRenderer content={articleContent!} articleId={article.id} />
       ) : isEarlyStage ? (
         <EarlyStageSections outline={outline} />
       ) : (
@@ -176,7 +176,7 @@ function EarlyStageSections({
         <section key={sec.section_number} className="section">
           <h2 className="section-head">
             <span className="num">{sec.section_number}.</span>
-            <span>{sec.heading || " "}</span>
+            <span>{sec.heading || " "}</span>
             <span className="status queue">
               <span className="d" /> 대기
             </span>
@@ -252,7 +252,7 @@ function GenerateStageSections({
           <section key={sec.section_number} className="section">
             <h2 className="section-head">
               <span className="num">{sec.section_number}.</span>
-              <span>{sec.heading || " "}</span>
+              <span>{sec.heading || " "}</span>
               <span className={`status ${statusCls}`}>
                 <span className="d" /> {statusText}
               </span>

@@ -1,5 +1,7 @@
+import mimetypes
+
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 
 from app.dependencies import get_article_service, get_file_manager
 from app.schemas.article import (
@@ -88,6 +90,43 @@ async def get_article_content(
     if content is None:
         raise HTTPException(status_code=404, detail="Content not generated yet")
     return PlainTextResponse(content, media_type="text/markdown; charset=utf-8")
+
+
+@router.get("/{article_id}/images")
+async def list_article_images(
+    article_id: int,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> ApiResponse[list[str]]:
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    images = fm.list_images(article.slug)
+    return ApiResponse(success=True, data=images)
+
+
+@router.get("/{article_id}/images/{filename}")
+async def get_article_image(
+    article_id: int,
+    filename: str,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> Response:
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    safe_name = filename.replace("..", "").replace("/", "").replace("\\", "")
+    image_path = fm.images_dir(article.slug) / safe_name
+    if not image_path.exists() or not image_path.is_file():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    content_type = mimetypes.guess_type(safe_name)[0] or "application/octet-stream"
+    return Response(
+        content=image_path.read_bytes(),
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
 
 
 @router.delete("/{article_id}")
