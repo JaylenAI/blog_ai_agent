@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { useAppStore } from "../../stores/app-store";
+import type { SidebarPanel } from "../../stores/app-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
 import { Icons } from "../common/Icons";
 import type { Article } from "../../types/article";
 
 export function Sidebar() {
-  const { articles, activeArticle, setActiveArticle } = useAppStore();
+  const { articles, activeArticle, setActiveArticle, setSidebarPanel } = useAppStore();
   const events = usePipelineStore((s) => s.events);
   const [openDrafts, setOpenDrafts] = useState(true);
   const [openPub, setOpenPub] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const openPanel = (panel: NonNullable<SidebarPanel>) => setSidebarPanel(panel);
 
   const filtered = searchQuery.trim()
     ? articles.filter((a) => {
@@ -121,17 +124,17 @@ export function Sidebar() {
 
         <div className="sb-section">
           <div className="sb-section-title">Agent</div>
-          <SbRow icon={<Icons.Layers />} label="Pipelines" />
-          <SbRow icon={<Icons.Bot />} label="Subagents" count={4} />
-          <SbRow icon={<Icons.Sparkle />} label="Skills" count={6} />
-          <SbRow icon={<Icons.Beaker />} label="Eval Harness" />
+          <SbRow icon={<Icons.Layers />} label="Pipelines" onClick={() => openPanel("pipelines")} />
+          <SbRow icon={<Icons.Bot />} label="Subagents" count={4} onClick={() => openPanel("subagents")} />
+          <SbRow icon={<Icons.Sparkle />} label="Skills" count={6} onClick={() => openPanel("skills")} />
+          <SbRow icon={<Icons.Beaker />} label="Eval Harness" onClick={() => openPanel("eval")} />
         </div>
 
         <div className="sb-section">
           <div className="sb-section-title">Settings</div>
-          <SbRow icon={<Icons.Hash />} label="STYLE.md" />
-          <SbRow icon={<Icons.Globe />} label="Tistory 연결" />
-          <SbRow icon={<Icons.Cog />} label="MCP & API" />
+          <SbRow icon={<Icons.Hash />} label="STYLE.md" onClick={() => openPanel("style-guide")} />
+          <SbRow icon={<Icons.Globe />} label="Tistory 연결" onClick={() => openPanel("tistory")} />
+          <SbRow icon={<Icons.Cog />} label="MCP & API" onClick={() => openPanel("mcp")} />
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { usePipelineSSE } from "../../hooks/use-pipeline-sse";
 import { useRestorePipeline } from "../../hooks/use-restore-pipeline";
 import { api } from "../../api/client";
 import { Sidebar } from "./Sidebar";
+import { SidebarPanel } from "./SidebarPanel";
 import { Topbar } from "./Topbar";
 import { Launcher } from "../editor/Launcher";
 import { ToastContainer } from "../common/ToastContainer";
@@ -149,6 +150,7 @@ export function AppShell() {
         )}
       </Suspense>
 
+      <SidebarPanel />
       <ToastContainer />
     </div>
   );

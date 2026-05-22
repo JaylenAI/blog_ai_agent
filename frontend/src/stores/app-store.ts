@@ -16,6 +16,8 @@ export interface Toast {
   message: string;
 }
 
+export type SidebarPanel = null | "pipelines" | "style-guide" | "tistory" | "subagents" | "skills" | "eval" | "mcp";
+
 interface AppState {
   sidebarOpen: boolean;
   rightPanelOpen: boolean;
@@ -30,6 +32,7 @@ interface AppState {
   density: Density;
   accentHue: number;
   toasts: Toast[];
+  sidebarPanel: SidebarPanel;
 
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
@@ -47,6 +50,7 @@ interface AppState {
   setAccentHue: (hue: number) => void;
   addToast: (toast: Omit<Toast, "id">) => void;
   removeToast: (id: string) => void;
+  setSidebarPanel: (panel: SidebarPanel) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -63,6 +67,7 @@ export const useAppStore = create<AppState>((set) => ({
   density: "default" as Density,
   accentHue: 255,
   toasts: [],
+  sidebarPanel: null,
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
@@ -86,4 +91,6 @@ export const useAppStore = create<AppState>((set) => ({
     })),
   removeToast: (id) =>
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  setSidebarPanel: (panel) =>
+    set((s) => ({ sidebarPanel: s.sidebarPanel === panel ? null : panel })),
 }));

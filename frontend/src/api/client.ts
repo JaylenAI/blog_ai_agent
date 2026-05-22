@@ -79,5 +79,16 @@ export const api = {
       request<{ validations: ValidationItem[]; summary: ValidationSummary }>(
         `/pipeline/runs/${runId}/validations`,
       ),
+    listRuns: (articleId?: number, limit = 20, offset = 0) => {
+      const params = new URLSearchParams();
+      if (articleId != null) params.set("article_id", String(articleId));
+      params.set("limit", String(limit));
+      params.set("offset", String(offset));
+      return request<PipelineRun[]>(`/pipeline/runs?${params}`);
+    },
+  },
+
+  settings: {
+    getStyleGuide: () => requestText("/settings/style-guide"),
   },
 };

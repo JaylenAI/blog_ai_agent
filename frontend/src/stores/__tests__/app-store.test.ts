@@ -14,6 +14,7 @@ describe("useAppStore", () => {
       gateModal: null,
       articlesLoading: false,
       toasts: [],
+      sidebarPanel: null,
     });
   });
 
@@ -86,5 +87,18 @@ describe("useAppStore", () => {
     expect(useAppStore.getState().theme).toBe("dark");
     useAppStore.getState().setDensity("compact");
     expect(useAppStore.getState().density).toBe("compact");
+  });
+
+  it("setSidebarPanel toggles panel", () => {
+    useAppStore.getState().setSidebarPanel("pipelines");
+    expect(useAppStore.getState().sidebarPanel).toBe("pipelines");
+    useAppStore.getState().setSidebarPanel("pipelines");
+    expect(useAppStore.getState().sidebarPanel).toBeNull();
+  });
+
+  it("setSidebarPanel switches to different panel", () => {
+    useAppStore.getState().setSidebarPanel("pipelines");
+    useAppStore.getState().setSidebarPanel("style-guide");
+    expect(useAppStore.getState().sidebarPanel).toBe("style-guide");
   });
 });
