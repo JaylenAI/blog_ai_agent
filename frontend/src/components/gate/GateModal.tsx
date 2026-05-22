@@ -1,9 +1,10 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePipelineActions } from "../../hooks/use-pipeline-actions";
 import { usePipelineStore } from "../../stores/pipeline-store";
 import { useAppStore } from "../../stores/app-store";
 import { OutlinePreview } from "./OutlinePreview";
 import { ContentPreview } from "./ContentPreview";
+import { Icons } from "../common/Icons";
 
 interface GateModalProps {
   gate: "gate_one" | "gate_two";
@@ -11,26 +12,12 @@ interface GateModalProps {
   onClose: () => void;
 }
 
-const GATE_CONFIG = {
-  gate_one: {
-    title: "GATE 1 — 아웃라인 검수",
-    approveLabel: "본문 생성 시작",
-    description:
-      "Stage 2~3이 완료되었습니다. 아웃라인을 확인하고 승인해 주세요.",
-  },
-  gate_two: {
-    title: "GATE 2 — 최종 검수",
-    approveLabel: "발행 준비 승인",
-    description:
-      "Validator 검증이 완료되었습니다. 최종 콘텐츠를 확인해 주세요.",
-  },
-};
-
 export function GateModal({ gate, runId, onClose }: GateModalProps) {
   const { approveGate, rejectGate } = usePipelineActions();
   const isRunning = usePipelineStore((s) => s.isRunning);
-  const config = GATE_CONFIG[gate];
   const closeGateModal = useAppStore((s) => s.closeGateModal);
+
+  const isGate1 = gate === "gate_one";
 
   const handleApprove = useCallback(async () => {
     await approveGate(runId);
@@ -49,84 +36,259 @@ export function GateModal({ gate, runId, onClose }: GateModalProps) {
   }, [closeGateModal]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-xl shadow-xl"
-        style={{ backgroundColor: "var(--color-bg-elev)" }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-6 py-4 border-b shrink-0"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <div>
-            <h2 className="text-base font-semibold">{config.title}</h2>
-            <p
-              className="text-xs mt-0.5"
-              style={{ color: "var(--color-text-muted)" }}
-            >
-              {config.description}
-            </p>
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <span className="gate-badge">{isGate1 ? "GATE 1" : "GATE 2"}</span>
+          <div className="modal-title">
+            {isGate1 ? "아웃라인 검수" : "최종 검수 — Tistory 게시 전"}
           </div>
-          <button
-            onClick={onClose}
-            className="text-lg px-2"
-            style={{ color: "var(--color-text-faint)" }}
-            aria-label="닫기"
-          >
-            ×
+          <button className="icon-btn" onClick={onClose}>
+            <Icons.X />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {gate === "gate_one" ? (
-            <OutlinePreview />
-          ) : (
-            <ContentPreview runId={runId} />
-          )}
+        <div className="modal-body">
+          {isGate1 ? <Gate1Body /> : <Gate2Body runId={runId} />}
         </div>
 
-        {/* Footer */}
-        <div
-          className="flex items-center justify-end gap-3 px-6 py-4 border-t shrink-0"
-          style={{ borderColor: "var(--color-border)" }}
-        >
+        <div className="modal-foot">
+          <span className="filler">
+            {isGate1
+              ? "Gate 1은 --auto 플래그로 건너뛸 수 있지만 기본은 사람이 검수"
+              : "Gate 2는 절대 자동화 불가 — 사람만 결정"}
+          </span>
           <button
-            className="text-sm px-4 py-2 rounded-md transition-colors"
-            style={{
-              backgroundColor: "var(--color-bg-hover)",
-              color: "var(--color-text-muted)",
-            }}
+            className="btn ghost"
+            onClick={handleReject}
+            disabled={isRunning}
+          >
+            수정 요청
+          </button>
+          <button
+            className="btn subtle"
             onClick={onClose}
             disabled={isRunning}
           >
             나중에
           </button>
           <button
-            className="text-sm px-4 py-2 rounded-md transition-colors text-white disabled:opacity-40"
-            style={{ backgroundColor: "var(--color-danger)" }}
-            onClick={handleReject}
-            disabled={isRunning}
-          >
-            거부
-          </button>
-          <button
-            className="text-sm px-4 py-2 rounded-md transition-colors text-white disabled:opacity-40"
-            style={{ backgroundColor: "var(--color-accent)" }}
+            className="btn primary"
             onClick={handleApprove}
             disabled={isRunning}
           >
-            {isRunning ? "처리 중..." : config.approveLabel}
+            <Icons.Check s={13} w={2.5} />
+            {isRunning
+              ? "처리 중..."
+              : isGate1
+                ? "본문 생성 시작"
+                : "Tistory에 발행 준비"}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Gate1Body() {
+  return (
+    <>
+      <div
+        style={{
+          fontSize: 13,
+          color: "var(--text-muted)",
+          marginBottom: 16,
+          lineHeight: 1.55,
+        }}
+      >
+        Stage 2~3이 완료되었습니다. 아웃라인을 확인하고 승인해 주세요.
+        <br />
+        진행하기 전에 구조와 출처 매핑을 확인해 주세요.
+      </div>
+      <OutlinePreview />
+      <div
+        style={{
+          marginTop: 16,
+          padding: 12,
+          background: "var(--bg-sub)",
+          borderRadius: 8,
+          fontSize: 12,
+          color: "var(--text-muted)",
+        }}
+      >
+        <strong style={{ color: "var(--text)" }}>💡 수정 예시:</strong>{" "}
+        &ldquo;3번 섹션을 &lsquo;기존 RAG와의 차이&rsquo;로 바꿔줘&rdquo;
+        처럼 자연어로 요청하면 아웃라인을 다시 짭니다.
+      </div>
+    </>
+  );
+}
+
+function Gate2Body({ runId }: { runId: number }) {
+  const validationSummary = usePipelineStore((s) => s.validationSummary);
+
+  return (
+    <>
+      <div
+        style={{
+          fontSize: 13,
+          color: "var(--text-muted)",
+          marginBottom: 16,
+          lineHeight: 1.55,
+        }}
+      >
+        {validationSummary && (
+          <>
+            Validator{" "}
+            <strong style={{ color: "var(--text)" }}>
+              {validationSummary.passed}/
+              {validationSummary.passed + validationSummary.failed} 통과
+            </strong>
+            .{" "}
+          </>
+        )}
+        이 게이트는{" "}
+        <strong style={{ color: "var(--text)" }}>
+          절대 자동화하지 않습니다.
+        </strong>{" "}
+        실제로 발행할지 사람이 결정합니다.
+      </div>
+
+      {validationSummary && (
+        <div className="validate-grid" style={{ marginBottom: 16 }}>
+          <div className="vstat pass">
+            <div className="label">PASS</div>
+            <div className="value">{validationSummary.passed}</div>
+          </div>
+          <div className="vstat warn">
+            <div className="label">WARN</div>
+            <div className="value">{validationSummary.failed}</div>
+          </div>
+          <div className="vstat">
+            <div className="label">점수</div>
+            <div className="value">
+              {Math.round(validationSummary.score * 100)}%
+            </div>
+          </div>
+        </div>
+      )}
+
+      <HighlightSection />
+      <ContentPreview runId={runId} />
+      <PrePublishChecklist />
+    </>
+  );
+}
+
+function HighlightSection() {
+  const validations = usePipelineStore((s) => s.validations);
+  const passedItems = validations.filter((v) => v.passed).slice(0, 5);
+
+  if (passedItems.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div className="vl-section-title">
+        하이라이트 — 통과 항목 일부
+        <span className="pill">{passedItems.length}건 표시</span>
+      </div>
+      {passedItems.map((v, i) => (
+        <div key={i} className="vl-row pass">
+          <span className="vl-ico">
+            <Icons.Check s={9} w={2.5} />
+          </span>
+          <span className="vl-name">{v.item}</span>
+          <span className="vl-num">{Math.round(v.score * 100)}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const CHECKLIST_ITEMS = [
+  "카테고리 태그 10개 확인",
+  "JSON-LD TechArticle + HowTo schema 삽입",
+  "이미지 alt 태그 부여",
+  "마치며 3단 서사 구조 확인",
+  "OG:image 메타 확인",
+  "내부 링크 2개 이상 삽입",
+] as const;
+
+function PrePublishChecklist() {
+  const [checked, setChecked] = useState<Record<number, boolean>>({});
+
+  const toggle = (index: number) => {
+    setChecked((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const checkedCount = Object.values(checked).filter(Boolean).length;
+
+  return (
+    <div
+      style={{
+        marginTop: 16,
+        padding: 14,
+        background: "var(--bg-sub)",
+        borderRadius: "var(--radius)",
+        fontSize: 12,
+        lineHeight: 1.7,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 8,
+          fontWeight: 600,
+          fontSize: 13,
+          color: "var(--text)",
+        }}
+      >
+        <span>📌 발행 직전 체크</span>
+        <span
+          style={{
+            marginLeft: "auto",
+            fontSize: 11,
+            color: "var(--text-muted)",
+          }}
+        >
+          {checkedCount}/{CHECKLIST_ITEMS.length}
+        </span>
+      </div>
+      {CHECKLIST_ITEMS.map((item, i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "3px 0",
+            cursor: "pointer",
+            color: checked[i] ? "var(--text-faint)" : "var(--text-muted)",
+            textDecoration: checked[i] ? "line-through" : "none",
+          }}
+          onClick={() => toggle(i)}
+        >
+          <span
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: "var(--radius-xs)",
+              border: `1.5px solid ${checked[i] ? "var(--success)" : "var(--border-strong)"}`,
+              background: checked[i] ? "var(--success)" : "transparent",
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+              color: "white",
+              fontSize: 9,
+            }}
+          >
+            {checked[i] && <Icons.Check s={9} w={2.5} />}
+          </span>
+          <span>{item}</span>
+        </div>
+      ))}
     </div>
   );
 }

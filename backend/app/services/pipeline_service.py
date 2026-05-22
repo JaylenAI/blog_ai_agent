@@ -127,7 +127,16 @@ class PipelineService:
         if run.status != PipelineStatus.PAUSED:
             raise ValueError("파이프라인이 대기 상태가 아닙니다")
         run.status = PipelineStatus.CANCELLED
-        await self._session.flush()
+        await self._session.commit()
+
+    async def cancel_run(self, run_id: int) -> None:
+        run = await self._pipeline_repo.find_by_id(run_id)
+        if not run:
+            raise ValueError("파이프라인 실행을 찾을 수 없습니다")
+        if run.status not in (PipelineStatus.RUNNING, PipelineStatus.PAUSED):
+            raise ValueError("취소 가능한 상태가 아닙니다")
+        run.status = PipelineStatus.CANCELLED
+        await self._session.commit()
 
     async def get_run(self, run_id: int) -> PipelineRun | None:
         return await self._pipeline_repo.find_by_id(run_id)

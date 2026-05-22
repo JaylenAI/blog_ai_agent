@@ -1,97 +1,93 @@
 import { useAppStore } from "../../stores/app-store";
+import { Icons } from "../common/Icons";
 
-const MODE_LABELS: Record<string, string> = {
-  idle: "",
-  research: "Researcher · 자료수집 중",
-  outline: "Gate 1 · 아웃라인 대기",
-  generate: "Generator · 본문 생성 중",
-  validate: "Validator · 검증 중",
-  gate2: "Gate 2 · 최종 검수",
-  published: "발행 완료",
+const STAGE_LABELS: Record<
+  string,
+  { txt: string; cls: string }
+> = {
+  idle: { txt: "준비", cls: "" },
+  research: { txt: "Researcher · 자료수집 중", cls: "live" },
+  outline: { txt: "Gate 1 · 아웃라인 대기", cls: "live" },
+  generate: { txt: "Generator · 본문 생성 중", cls: "live" },
+  validate: { txt: "Validator · 14항목 검증", cls: "live" },
+  gate2: { txt: "Gate 2 · 최종 검수", cls: "live" },
+  published: { txt: "Tistory 발행 완료", cls: "done" },
 };
 
 export function Topbar() {
   const {
-    sidebarOpen,
     toggleSidebar,
+    toggleRightPanel,
     activeArticle,
     pipelineMode,
-    toggleRightPanel,
+    openGateModal,
+    gateModal,
+    theme,
+    setTheme,
   } = useAppStore();
 
-  const label = MODE_LABELS[pipelineMode] ?? "";
-  const isLive = pipelineMode !== "idle" && pipelineMode !== "published";
-  const isDone = pipelineMode === "published";
+  const stage = STAGE_LABELS[pipelineMode] ?? { txt: "준비", cls: "" };
+  const isGateMode = pipelineMode === "outline" || pipelineMode === "gate2";
+  const runId = useAppStore((s) => {
+    const ev = s.articles.find((a) => a.id === s.activeArticle?.id);
+    return ev?.id ?? 0;
+  });
 
   return (
-    <header
-      className="flex items-center gap-3 px-4 border-b shrink-0"
-      style={{
-        height: "var(--top-h)",
-        borderColor: "var(--color-border)",
-        backgroundColor: "var(--color-bg-elev)",
-      }}
-    >
-      {/* Sidebar toggle */}
-      <button
-        onClick={toggleSidebar}
-        className="text-sm"
-        style={{ color: "var(--color-text-muted)" }}
-        aria-label={sidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
-      >
-        &#9776;
+    <header className="topbar">
+      <button className="icon-btn" title="사이드바" onClick={toggleSidebar}>
+        <Icons.Sidebar />
       </button>
-
-      {/* Breadcrumb */}
-      <div
-        className="flex-1 text-sm truncate"
-        style={{ color: "var(--color-text-muted)" }}
-      >
-        {activeArticle
-          ? `AI의 정석 / Drafts / ${activeArticle.title ?? activeArticle.topic}`
-          : "AI의 정석"}
+      <div className="crumbs">
+        <span className="crumb">AI의 정석</span>
+        <span className="sep">/</span>
+        <span className="crumb">Drafts</span>
+        <span className="sep">/</span>
+        <span className="crumb last">
+          {activeArticle
+            ? (activeArticle.title ?? activeArticle.topic)
+            : "새 글"}
+        </span>
       </div>
 
-      {/* Pipeline pill */}
-      {label && (
-        <span
-          className="text-xs px-2.5 py-1 rounded-full font-medium"
-          style={{
-            backgroundColor: isDone
-              ? "color-mix(in oklch, var(--color-success) 15%, transparent)"
-              : isLive
-                ? "color-mix(in oklch, var(--color-accent) 15%, transparent)"
-                : "var(--color-bg-sub)",
-            color: isDone
-              ? "var(--color-success)"
-              : isLive
-                ? "var(--color-accent)"
-                : "var(--color-text-muted)",
-          }}
+      <div className="topbar-right">
+        {pipelineMode !== "idle" && (
+          <button
+            className={`pipeline-pill ${stage.cls}`}
+            onClick={() => {
+              if (isGateMode && gateModal === null) {
+                openGateModal(
+                  pipelineMode === "outline" ? "gate_one" : "gate_two",
+                  runId,
+                );
+              }
+            }}
+            title={isGateMode ? "검수 모달 열기" : ""}
+          >
+            {stage.cls === "live" && <span className="pulse" />}
+            {stage.txt}
+          </button>
+        )}
+        <button className="icon-btn" title="미리보기">
+          <Icons.Eye /> 미리보기
+        </button>
+        <button className="icon-btn" title="공유">
+          <Icons.Share />
+        </button>
+        <button
+          className="icon-btn ghost"
+          title={theme === "light" ? "다크 모드" : "라이트 모드"}
+          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
         >
-          {isLive && (
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 animate-pulse"
-              style={{
-                backgroundColor: "var(--color-accent)",
-              }}
-            />
-          )}
-          {label}
-        </span>
-      )}
-
-      {/* Right panel toggle */}
-      <button
-        onClick={toggleRightPanel}
-        className="text-xs px-2 py-1 rounded transition-colors"
-        style={{
-          backgroundColor: "var(--color-bg-hover)",
-          color: "var(--color-text-muted)",
-        }}
-      >
-        파이프라인
-      </button>
+          {theme === "light" ? <Icons.Moon s={14} /> : <Icons.Sun s={14} />}
+        </button>
+        <button className="icon-btn primary" onClick={toggleRightPanel}>
+          파이프라인
+        </button>
+        <button className="icon-btn" title="더보기">
+          <Icons.More />
+        </button>
+      </div>
     </header>
   );
 }

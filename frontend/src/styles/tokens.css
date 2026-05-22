@@ -1,50 +1,45 @@
 @theme {
-  /* ── Typography ── */
-  --font-sans: "Geist", system-ui, -apple-system, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, monospace;
-  --font-serif: "Instrument Serif", Georgia, serif;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
 
-  /* ── Geometry ── */
+  --bg: #FBFBFA;
+  --bg-elev: #FFFFFF;
+  --bg-sub: #F4F4F2;
+  --bg-hover: #EFEEEB;
+  --bg-active: #E9E8E4;
+  --border: #E8E8E5;
+  --border-strong: #D9D7D2;
+  --text: #1F1E1B;
+  --text-soft: #3D3B36;
+  --text-muted: #6B6963;
+  --text-faint: #9C9A93;
+
+  --accent: oklch(55% 0.13 255);
+  --accent-soft: oklch(55% 0.13 255 / 0.10);
+  --accent-strong: oklch(45% 0.16 255);
+
+  --success: oklch(58% 0.12 150);
+  --success-soft: oklch(58% 0.12 150 / 0.12);
+  --warn: oklch(70% 0.14 70);
+  --warn-soft: oklch(70% 0.14 70 / 0.14);
+  --danger: oklch(58% 0.18 25);
+  --danger-soft: oklch(58% 0.18 25 / 0.12);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
   --sidebar-w: 260px;
   --right-w: 360px;
   --top-h: 44px;
 
-  --radius-xs: 4px;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --shadow-sm: 0 1px 0 rgba(15, 15, 15, 0.04), 0 1px 2px rgba(15, 15, 15, 0.06);
+  --shadow: 0 2px 4px rgba(15, 15, 15, 0.05), 0 4px 12px rgba(15, 15, 15, 0.06);
+  --shadow-lg: 0 12px 32px rgba(15, 15, 15, 0.12), 0 4px 12px rgba(15, 15, 15, 0.06);
 
-  /* ── Density: Cozy (default) ── */
   --row-h: 28px;
   --gap: 8px;
-
-  /* ── Light mode colors ── */
-  --color-bg: #fbfbfa;
-  --color-bg-elev: #ffffff;
-  --color-bg-sub: #f4f4f2;
-  --color-bg-hover: #efeeeb;
-  --color-bg-active: #e9e8e4;
-  --color-border: #e8e8e5;
-  --color-text: #1f1e1b;
-  --color-text-muted: #6b6963;
-  --color-text-faint: #9c9a93;
-  --color-accent: oklch(55% 0.13 255);
-  --color-success: oklch(58% 0.12 150);
-  --color-warn: oklch(70% 0.14 70);
-  --color-danger: oklch(58% 0.18 25);
-}
-
-/* ── Dark mode overrides ── */
-@media (prefers-color-scheme: dark) {
-  @theme {
-    --color-bg: #18181a;
-    --color-bg-elev: #1f1f22;
-    --color-bg-sub: #27272a;
-    --color-bg-hover: #2e2e32;
-    --color-bg-active: #3a3a3f;
-    --color-border: #333338;
-    --color-text: #ececea;
-    --color-text-muted: #a0a09a;
-    --color-text-faint: #6b6b65;
-    --color-accent: oklch(72% 0.13 255);
-  }
 }

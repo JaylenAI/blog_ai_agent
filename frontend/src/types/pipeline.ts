@@ -12,7 +12,8 @@ export type EventType =
   | "stage_complete"
   | "stage_error"
   | "gate_pending"
-  | "pipeline_complete";
+  | "pipeline_complete"
+  | "pipeline_error";
 
 export interface PipelineEvent {
   event_type: EventType;

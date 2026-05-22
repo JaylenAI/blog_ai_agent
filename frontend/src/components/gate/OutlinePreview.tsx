@@ -1,10 +1,16 @@
 import { usePipelineStore } from "../../stores/pipeline-store";
 
+interface OutlineImage {
+  type: "mmd" | "svg";
+  caption?: string;
+}
+
 interface OutlineSection {
   section_number: number;
   heading: string;
   key_points: string[];
   estimated_words: number;
+  images?: OutlineImage[];
 }
 
 export function OutlinePreview() {
@@ -14,58 +20,76 @@ export function OutlinePreview() {
     (e) => e.event_type === "gate_pending" && e.stage === "gate_one",
   );
   const data = gateEvent?.data as
-    | { outline?: OutlineSection[]; total_sections?: number; estimated_total_words?: number }
+    | {
+        outline?: OutlineSection[];
+        total_sections?: number;
+        estimated_total_words?: number;
+      }
     | undefined;
 
   const outline = data?.outline ?? [];
 
   if (outline.length === 0) {
     return (
-      <p style={{ color: "var(--color-text-muted)" }}>
+      <p style={{ color: "var(--text-muted)" }}>
         아웃라인 데이터가 없습니다.
       </p>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div
-        className="flex gap-4 text-xs"
-        style={{ color: "var(--color-text-faint)" }}
-      >
-        <span>섹션 {data?.total_sections ?? outline.length}개</span>
-        <span>
-          예상 {(data?.estimated_total_words ?? 0).toLocaleString()}자
-        </span>
+    <>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <div className="vstat" style={{ flex: 1 }}>
+          <div className="label">섹션</div>
+          <div className="value">{data?.total_sections ?? outline.length}</div>
+        </div>
+        <div className="vstat" style={{ flex: 1 }}>
+          <div className="label">예상 분량</div>
+          <div className="value">
+            {((data?.estimated_total_words ?? 0) / 1000).toFixed(1)}K자
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        {outline.map((section) => (
-          <div
-            key={section.section_number}
-            className="p-3 rounded-md"
-            style={{ backgroundColor: "var(--color-bg-sub)" }}
-          >
-            <div className="text-sm font-medium">{section.heading}</div>
-            {section.key_points.length > 0 && (
-              <ul
-                className="mt-1 space-y-0.5 text-xs list-disc list-inside"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                {section.key_points.map((pt, i) => (
-                  <li key={i}>{pt}</li>
-                ))}
-              </ul>
-            )}
-            <div
-              className="mt-1 text-xs"
-              style={{ color: "var(--color-text-faint)" }}
-            >
-              ~{section.estimated_words}자
+      <div className="outline-list">
+        {outline.map((s) => (
+          <div key={s.section_number} className="outline-item">
+            <div className="outline-num">{s.section_number}.</div>
+            <div>
+              <div className="outline-h2">{s.heading}</div>
+              {s.key_points.length > 0 && (
+                <div className="outline-key">
+                  {s.key_points.length <= 3
+                    ? s.key_points.join(" · ")
+                    : `${s.key_points.slice(0, 3).join(" · ")} 외 ${s.key_points.length - 3}건`}
+                </div>
+              )}
+            </div>
+            <div className="outline-tags">
+              {s.images?.map((img, j) => (
+                <span
+                  key={`img-${j}`}
+                  className="outline-tag"
+                  style={{
+                    background:
+                      img.type === "mmd"
+                        ? "var(--accent-soft)"
+                        : "var(--bg-sub)",
+                    color:
+                      img.type === "mmd"
+                        ? "var(--accent-strong)"
+                        : "var(--text-muted)",
+                  }}
+                >
+                  {img.type.toUpperCase()}
+                </span>
+              ))}
+              <span className="outline-tag">~{s.estimated_words}자</span>
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </>
   );
 }

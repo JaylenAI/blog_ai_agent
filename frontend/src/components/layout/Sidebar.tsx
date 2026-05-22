@@ -1,184 +1,169 @@
+import { useState } from "react";
 import { useAppStore } from "../../stores/app-store";
+import { usePipelineStore } from "../../stores/pipeline-store";
+import { Icons } from "../common/Icons";
 import type { Article } from "../../types/article";
 
-const DRAFT_STATUSES = new Set([
-  "draft",
-  "researching",
-  "outlining",
-  "generating",
-  "validating",
-  "review",
-  "publishing",
-  "failed",
-]);
-
-function groupArticles(articles: Article[]) {
-  const drafts: Article[] = [];
-  const published: Article[] = [];
-  for (const a of articles) {
-    if (a.status === "published") {
-      published.push(a);
-    } else if (DRAFT_STATUSES.has(a.status)) {
-      drafts.push(a);
-    }
-  }
-  return { drafts, published };
-}
-
 export function Sidebar() {
-  const { articles, activeArticle, setActiveArticle, articlesLoading } =
-    useAppStore();
-  const { drafts, published } = groupArticles(articles);
+  const { articles, activeArticle, setActiveArticle } = useAppStore();
+  const events = usePipelineStore((s) => s.events);
+  const [openDrafts, setOpenDrafts] = useState(true);
+  const [openPub, setOpenPub] = useState(false);
+
+  const drafts = articles.filter((a) => a.status !== "published");
+  const published = articles.filter((a) => a.status === "published");
+
+  const referenceCount = events
+    .filter(
+      (e) =>
+        e.event_type === "stage_complete" &&
+        e.stage === "researcher" &&
+        e.data?.librarian,
+    )
+    .reduce(
+      (sum, e) =>
+        sum + ((e.data?.reference_count as number | undefined) ?? 0),
+      0,
+    );
 
   return (
-    <aside
-      className="flex flex-col border-r h-full overflow-y-auto"
-      style={{
-        width: "var(--sidebar-w)",
-        minWidth: "var(--sidebar-w)",
-        borderColor: "var(--color-border)",
-        backgroundColor: "var(--color-bg-sub)",
-      }}
-    >
-      {/* Brand */}
-      <div
-        className="flex items-center gap-2 px-4 font-semibold"
-        style={{ height: "var(--top-h)" }}
-      >
-        <span
-          className="inline-flex items-center justify-center rounded-full text-white text-xs font-bold"
-          style={{
-            width: 22,
-            height: 22,
-            backgroundColor: "var(--color-accent)",
-          }}
-        >
-          B
-        </span>
-        <span>Blog Agent</span>
-        <span
-          className="text-xs"
-          style={{ color: "var(--color-text-faint)" }}
-        >
-          v0.1
-        </span>
+    <aside className="sidebar">
+      <div className="sidebar-brand">
+        <div className="brand-mark">B</div>
+        <div className="brand-name">Blog Agent</div>
+        <div className="brand-meta">v0.4</div>
       </div>
 
-      {/* New article button */}
-      <div className="px-3 py-2">
-        <button
-          className="w-full text-left text-sm px-3 py-1.5 rounded-md transition-colors"
-          style={{
-            backgroundColor: "var(--color-bg-hover)",
-            color: "var(--color-text)",
-          }}
-          onClick={() => setActiveArticle(null)}
-        >
-          + 새 글 만들기
-        </button>
-      </div>
-
-      {/* Loading state */}
-      {articlesLoading && articles.length === 0 && (
-        <div className="px-3 space-y-2 py-2">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-7 rounded-md animate-pulse"
-              style={{ backgroundColor: "var(--color-bg-hover)" }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!articlesLoading && articles.length === 0 && (
-        <div
-          className="px-4 py-6 text-center text-xs"
-          style={{ color: "var(--color-text-faint)" }}
-        >
-          아직 작성한 글이 없습니다
-        </div>
-      )}
-
-      {/* Drafts */}
-      {drafts.length > 0 && (
-        <>
-          <SectionHeader label="Drafts" count={drafts.length} />
-          <nav className="px-2 space-y-0.5">
-            {drafts.map((a) => (
-              <ArticleItem
-                key={a.id}
-                article={a}
-                active={activeArticle?.id === a.id}
-                onClick={() => setActiveArticle(a)}
-              />
-            ))}
-          </nav>
-        </>
-      )}
-
-      {/* Published */}
-      {published.length > 0 && (
-        <>
-          <SectionHeader label="Published" count={published.length} />
-          <nav className="px-2 space-y-0.5">
-            {published.map((a) => (
-              <ArticleItem
-                key={a.id}
-                article={a}
-                active={activeArticle?.id === a.id}
-                onClick={() => setActiveArticle(a)}
-              />
-            ))}
-          </nav>
-        </>
-      )}
-
-      {/* Bottom user area */}
-      <div
-        className="mt-auto border-t px-4 py-3"
-        style={{ borderColor: "var(--color-border)" }}
-      >
-        <div className="flex items-center gap-2">
-          <span
-            className="inline-flex items-center justify-center rounded-full text-xs font-bold"
-            style={{
-              width: 24,
-              height: 24,
-              backgroundColor: "var(--color-bg-active)",
-              color: "var(--color-text-muted)",
-            }}
-          >
-            JH
-          </span>
-          <div
-            className="text-xs"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            <div>Jaylen H.</div>
-            <div style={{ color: "var(--color-text-faint)" }}>
-              jaylenhan.tistory.com
-            </div>
+      <div className="sidebar-scroll">
+        <div className="sb-section">
+          <SbRow icon={<Icons.Search />} label="검색" />
+          <SbRow icon={<Icons.Inbox />} label="알림" />
+          <div onClick={() => setActiveArticle(null)}>
+            <SbRow icon={<Icons.Plus />} label="새 글 만들기" />
           </div>
+        </div>
+
+        <div className="sb-section">
+          <div className="sb-section-title">Workspaces</div>
+          <SbRow
+            icon={<Icons.Folder />}
+            label="AI의 정석 · jaylenhan"
+            chev
+            openChev
+          />
+          <SbRow
+            indent={1}
+            icon={<Icons.Doc />}
+            label="Drafts"
+            count={drafts.length}
+            chev
+            openChev={openDrafts}
+            onClick={() => setOpenDrafts((v) => !v)}
+          />
+          {openDrafts &&
+            drafts.map((d) => (
+              <ArticleRow
+                key={d.id}
+                article={d}
+                active={activeArticle?.id === d.id}
+                onClick={() => setActiveArticle(d)}
+              />
+            ))}
+          <SbRow
+            indent={1}
+            icon={<Icons.Send />}
+            label="Published"
+            count={published.length}
+            chev
+            openChev={openPub}
+            onClick={() => setOpenPub((v) => !v)}
+          />
+          {openPub &&
+            published.map((p) => (
+              <ArticleRow
+                key={p.id}
+                article={p}
+                active={activeArticle?.id === p.id}
+                onClick={() => setActiveArticle(p)}
+              />
+            ))}
+          <SbRow
+            indent={1}
+            icon={<Icons.Tag />}
+            label="References"
+            count={referenceCount > 0 ? referenceCount : undefined}
+          />
+        </div>
+
+        <div className="sb-section">
+          <div className="sb-section-title">Agent</div>
+          <SbRow icon={<Icons.Layers />} label="Pipelines" />
+          <SbRow icon={<Icons.Bot />} label="Subagents" count={4} />
+          <SbRow icon={<Icons.Sparkle />} label="Skills" count={6} />
+          <SbRow icon={<Icons.Beaker />} label="Eval Harness" />
+        </div>
+
+        <div className="sb-section">
+          <div className="sb-section-title">Settings</div>
+          <SbRow icon={<Icons.Hash />} label="STYLE.md" />
+          <SbRow icon={<Icons.Globe />} label="Tistory 연결" />
+          <SbRow icon={<Icons.Cog />} label="MCP & API" />
+        </div>
+      </div>
+
+      <div className="sb-foot">
+        <div className="avatar">JH</div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="sb-foot-name">Jaylen H.</div>
+          <div className="sb-foot-sub">jaylenhan.tistory.com</div>
         </div>
       </div>
     </aside>
   );
 }
 
-function SectionHeader({ label, count }: { label: string; count: number }) {
+function SbRow({
+  indent = 0,
+  icon,
+  label,
+  count,
+  dot,
+  active,
+  chev,
+  openChev,
+  onClick,
+}: {
+  indent?: number;
+  icon?: React.ReactNode;
+  label: string;
+  count?: number;
+  dot?: boolean;
+  active?: boolean;
+  chev?: boolean;
+  openChev?: boolean;
+  onClick?: () => void;
+}) {
   return (
     <div
-      className="px-4 pt-4 pb-1 text-xs font-medium uppercase tracking-wider"
-      style={{ color: "var(--color-text-faint)" }}
+      className={`sb-row indent-${indent} ${active ? "active" : ""}`}
+      onClick={onClick}
     >
-      {label} ({count})
+      {chev !== undefined && (
+        <Icons.Chevron
+          s={12}
+          w={1.6}
+          className={`chev ${openChev ? "open" : ""}`}
+        />
+      )}
+      {icon && <span className="ico">{icon}</span>}
+      {dot && <span className="dot" />}
+      <span className="lbl">{label}</span>
+      {count !== undefined && <span className="count">{count}</span>}
     </div>
   );
 }
 
-function ArticleItem({
+function ArticleRow({
   article,
   active,
   onClick,
@@ -187,16 +172,18 @@ function ArticleItem({
   active: boolean;
   onClick: () => void;
 }) {
+  const isGenerating =
+    article.status === "generating" || article.status === "researching";
+
   return (
-    <button
-      className="w-full text-left text-sm px-3 py-1.5 rounded-md truncate transition-colors"
-      style={{
-        backgroundColor: active ? "var(--color-bg-active)" : "transparent",
-        color: active ? "var(--color-text)" : "var(--color-text-muted)",
-      }}
-      onClick={onClick}
-    >
-      {article.title ?? article.topic}
-    </button>
+    <div onClick={onClick}>
+      <SbRow
+        indent={2}
+        icon={<Icons.Doc />}
+        label={article.title ?? article.topic}
+        dot={isGenerating}
+        active={active}
+      />
+    </div>
   );
 }
