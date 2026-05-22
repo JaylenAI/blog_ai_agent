@@ -26,6 +26,16 @@ async def health_check() -> ApiResponse[dict]:
 async def health_detailed() -> ApiResponse[dict]:
     checks: dict[str, dict] = {}
 
+    try:
+        from sqlalchemy import text
+
+        from app.db.session import async_session_factory
+        async with async_session_factory() as session:
+            await session.execute(text("SELECT 1"))
+        checks["database"] = {"status": "ok"}
+    except Exception as e:
+        checks["database"] = {"status": "error", "message": str(e)}
+
     claude_path = shutil.which(settings.claude_code_path)
     if claude_path:
         try:

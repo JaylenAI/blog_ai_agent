@@ -11,6 +11,7 @@ from app.api.middleware.request_logger import RequestLoggerMiddleware
 from app.api.router import api_router
 from app.config import settings
 from app.db.engine import init_db
+from app.db.session import async_session_factory
 from app.formats import get_format_registry
 from app.utils.logger import get_logger, setup_logging
 
@@ -30,8 +31,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         len(registry.format_ids),
     )
     yield
-    logger.info("Blog AI Agent 종료")
+    logger.info("Blog AI Agent 종료 시작 — 실행 중인 파이프라인 일시정지")
+    await _pause_running_pipelines()
     _shutdown_event.set()
+    logger.info("Blog AI Agent 종료 완료")
+
+
+async def _pause_running_pipelines() -> None:
+    from app.db.repositories.pipeline_repo import PipelineRepository
+    from app.models.pipeline_run import PipelineStatus
+
+    async with async_session_factory() as session:
+        repo = PipelineRepository(session)
+        running = await repo.find_running()
+        for run in running:
+            run.status = PipelineStatus.PAUSED
+            logger.info("파이프라인 run_id=%d PAUSED로 전환", run.id)
+        await session.commit()
 
 
 def create_app() -> FastAPI:

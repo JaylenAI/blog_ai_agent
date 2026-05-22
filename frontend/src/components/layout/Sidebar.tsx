@@ -9,9 +9,21 @@ export function Sidebar() {
   const events = usePipelineStore((s) => s.events);
   const [openDrafts, setOpenDrafts] = useState(true);
   const [openPub, setOpenPub] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const drafts = articles.filter((a) => a.status !== "published");
-  const published = articles.filter((a) => a.status === "published");
+  const filtered = searchQuery.trim()
+    ? articles.filter((a) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          a.topic.toLowerCase().includes(q) ||
+          (a.title ?? "").toLowerCase().includes(q)
+        );
+      })
+    : articles;
+
+  const drafts = filtered.filter((a) => a.status !== "published");
+  const published = filtered.filter((a) => a.status === "published");
 
   const referenceCount = events
     .filter(
@@ -36,7 +48,19 @@ export function Sidebar() {
 
       <div className="sidebar-scroll">
         <div className="sb-section">
-          <SbRow icon={<Icons.Search />} label="검색" />
+          <div onClick={() => setShowSearch((v) => !v)}>
+            <SbRow icon={<Icons.Search />} label="검색" />
+          </div>
+          {showSearch && (
+            <input
+              className="sb-search"
+              type="text"
+              placeholder="제목 또는 주제 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+          )}
           <SbRow icon={<Icons.Inbox />} label="알림" />
           <div onClick={() => setActiveArticle(null)}>
             <SbRow icon={<Icons.Plus />} label="새 글 만들기" />

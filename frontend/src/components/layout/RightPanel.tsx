@@ -388,7 +388,14 @@ function ReferencesTab() {
         </span>
       </div>
       {references.map((r, i) => (
-        <div key={i} className="ref-row">
+        <a
+          key={i}
+          className="ref-row"
+          href={r.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: "none", color: "inherit", display: "flex" }}
+        >
           <div className={`ref-rel ${getRelevanceClass(r.relevance_score)}`}>
             {Math.round(r.relevance_score * 5)}
           </div>
@@ -397,9 +404,10 @@ function ReferencesTab() {
             <div className="ref-source">
               <span className="ref-type">{r.source_type}</span>
               <span>{safeHostname(r.url)}</span>
+              <Icons.ExternalLink s={10} />
             </div>
           </div>
-        </div>
+        </a>
       ))}
     </div>
   );

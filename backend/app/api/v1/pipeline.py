@@ -143,6 +143,54 @@ async def get_validations(
     )
 
 
+@router.get("/runs")
+async def list_runs(
+    article_id: int | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    service: PipelineService = Depends(get_pipeline_service),
+) -> ApiResponse[list[PipelineRunResponse]]:
+    if article_id is not None:
+        runs = await service.get_runs_for_article(article_id)
+    else:
+        runs = await service.get_all_runs(limit=limit, offset=offset)
+    return ApiResponse(
+        success=True,
+        data=[PipelineRunResponse.model_validate(r) for r in runs],
+    )
+
+
+@router.post("/runs/{run_id}/retry/stream")
+async def retry_pipeline_stream(
+    run_id: int,
+) -> EventSourceResponse:
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def _retry_bg(q: asyncio.Queue, rid: int) -> None:
+        async with async_session_factory() as session:
+            try:
+                svc = PipelineService(session, ClaudeClient(), FileManager())
+                async for event in svc.retry_pipeline(rid):
+                    await q.put(_event_to_dict(event))
+                await session.commit()
+            except Exception as e:
+                await session.rollback()
+                logger.error("파이프라인 재시도 실패: %s", e, exc_info=True)
+                await q.put({
+                    "event_type": "pipeline_error",
+                    "stage": "system",
+                    "message": str(e),
+                    "data": {},
+                })
+            finally:
+                await q.put(None)
+
+    task = asyncio.create_task(_retry_bg(queue, run_id))
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return _sse_from_queue(queue)
+
+
 @router.get("/runs/active")
 async def get_active_run(
     service: PipelineService = Depends(get_pipeline_service),

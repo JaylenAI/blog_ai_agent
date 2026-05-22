@@ -32,6 +32,25 @@ class PipelineRepository(BaseRepository[PipelineRun]):
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def find_all_runs(
+        self, *, limit: int = 50, offset: int = 0
+    ) -> list[PipelineRun]:
+        stmt = (
+            select(PipelineRun)
+            .order_by(PipelineRun.started_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def find_running(self) -> list[PipelineRun]:
+        stmt = select(PipelineRun).where(
+            PipelineRun.status == "running"
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
     async def find_latest_active(self) -> PipelineRun | None:
         stmt = (
             select(PipelineRun)

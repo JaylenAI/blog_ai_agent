@@ -288,4 +288,7 @@ export const Icons = {
       }
     />
   ),
+  ExternalLink: (p: IconProps) => (
+    <Ic {...p} d={<path d="M11 1h4v4M15 1L8 8M13 9v4a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h4" />} />
+  ),
 };

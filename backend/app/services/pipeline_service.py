@@ -152,8 +152,58 @@ class PipelineService:
     async def get_active_run(self) -> PipelineRun | None:
         return await self._pipeline_repo.find_latest_active()
 
+    async def get_all_runs(
+        self, *, limit: int = 50, offset: int = 0
+    ) -> list[PipelineRun]:
+        return await self._pipeline_repo.find_all_runs(limit=limit, offset=offset)
+
     async def get_runs_for_article(self, article_id: int) -> list[PipelineRun]:
         return await self._pipeline_repo.find_by_article_id(article_id)
+
+    async def retry_pipeline(
+        self, run_id: int
+    ) -> AsyncGenerator[PipelineEvent, None]:
+        run = await self._pipeline_repo.find_by_id(run_id)
+        if not run:
+            yield PipelineEvent(
+                event_type="pipeline_error",
+                stage="retry",
+                message="파이프라인 실행을 찾을 수 없습니다",
+            )
+            return
+
+        if run.status != PipelineStatus.FAILED:
+            yield PipelineEvent(
+                event_type="pipeline_error",
+                stage="retry",
+                message="실패 상태의 파이프라인만 재시도할 수 있습니다",
+            )
+            return
+
+        article = await self._article_repo.find_by_id(run.article_id)
+        if not article:
+            yield PipelineEvent(
+                event_type="pipeline_error",
+                stage="retry",
+                message="아티클을 찾을 수 없습니다",
+            )
+            return
+
+        new_run = PipelineRun(article_id=article.id)
+        new_run = await self._pipeline_repo.create(new_run)
+
+        orchestrator = PipelineOrchestrator(self._build_all_stages())
+
+        async for event in orchestrator.execute(
+            pipeline_run=new_run,
+            topic=article.topic,
+            slug=article.slug,
+            format_id=article.format_id,
+            session=self._session,
+        ):
+            yield event
+
+        await self._save_validations(new_run.id, article.slug)
 
     async def get_validations(
         self, run_id: int

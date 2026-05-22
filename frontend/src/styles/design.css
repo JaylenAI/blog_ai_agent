@@ -142,6 +142,13 @@ a { color: inherit; text-decoration: none; }
 .sb-row.active { background: var(--bg-active); color: var(--text); font-weight: 500; }
 .sb-row.indent-1 { padding-left: 22px; }
 .sb-row.indent-2 { padding-left: 38px; }
+.sb-search {
+  display: block; width: calc(100% - 16px); margin: 2px 8px 6px;
+  padding: 6px 10px; font-size: 12px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--bg-elev);
+  color: var(--text); outline: none;
+}
+.sb-search:focus { border-color: var(--accent); }
 .sb-row .ico { width: 16px; height: 16px; flex-shrink: 0; color: var(--text-muted); }
 .sb-row.active .ico { color: var(--text); }
 .sb-row .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

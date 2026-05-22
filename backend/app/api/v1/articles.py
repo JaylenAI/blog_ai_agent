@@ -92,6 +92,21 @@ async def get_article_content(
     return PlainTextResponse(content, media_type="text/markdown; charset=utf-8")
 
 
+@router.get("/{article_id}/html")
+async def get_article_html(
+    article_id: int,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> ApiResponse[str]:
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    html = fm.read_text(article.slug, "tistory.html")
+    if html is None:
+        raise HTTPException(status_code=404, detail="HTML not generated yet")
+    return ApiResponse(success=True, data=html)
+
+
 @router.get("/{article_id}/images")
 async def list_article_images(
     article_id: int,
