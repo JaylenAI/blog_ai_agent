@@ -202,21 +202,34 @@ def tmp_file_manager(tmp_path: Path) -> FileManager:
     return FileManager(base_dir=tmp_path)
 
 
+MOCK_IMAGE_PLAN = {"images": []}
+
 def build_mock_claude(*, full_pipeline: bool = False) -> AsyncMock:
     mock = AsyncMock(spec=ClaudeClient)
-    mock.run_json.side_effect = [
-        MOCK_ROUTER_RESPONSE,
-        MOCK_LIBRARIAN_RESPONSE,
-        MOCK_LIBRARIAN_RESPONSE,
-        MOCK_LIBRARIAN_RESPONSE,
-        MOCK_LIBRARIAN_RESPONSE,
-        MOCK_OUTLINE_RESPONSE,
-        MOCK_VALIDATOR_RESPONSE,
-    ]
     if full_pipeline:
+        mock.run_json.side_effect = [
+            MOCK_ROUTER_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_OUTLINE_RESPONSE,
+            MOCK_IMAGE_PLAN,
+            MOCK_VALIDATOR_RESPONSE,
+        ]
         mock.run.return_value = MockClaudeResponse(
             text=MOCK_FULL_CONTENT
         )
+    else:
+        mock.run_json.side_effect = [
+            MOCK_ROUTER_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_OUTLINE_RESPONSE,
+            MOCK_VALIDATOR_RESPONSE,
+        ]
     return mock
 
 

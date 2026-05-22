@@ -76,22 +76,34 @@ def _setup_mocks(
     client: AsyncClient, *, full_pipeline: bool = False
 ) -> tuple[AsyncMock, MagicMock]:
     mock_claude = AsyncMock()
-    mock_claude.run_json.side_effect = [
-        MOCK_ROUTER_RESPONSE,
-        MOCK_LIBRARIAN_RESPONSE,
-        MOCK_LIBRARIAN_RESPONSE,
-        MOCK_LIBRARIAN_RESPONSE,
-        MOCK_LIBRARIAN_RESPONSE,
-        MOCK_OUTLINE_RESPONSE,
-        MOCK_VALIDATOR_RESPONSE,
-    ]
+    if full_pipeline:
+        mock_claude.run_json.side_effect = [
+            MOCK_ROUTER_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_OUTLINE_RESPONSE,
+            {"images": []},
+            MOCK_VALIDATOR_RESPONSE,
+        ]
+        mock_claude.run.return_value = MockClaudeResponse(
+            text=MOCK_FULL_CONTENT,
+        )
+    else:
+        mock_claude.run_json.side_effect = [
+            MOCK_ROUTER_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_LIBRARIAN_RESPONSE,
+            MOCK_OUTLINE_RESPONSE,
+            MOCK_VALIDATOR_RESPONSE,
+        ]
 
     mock_fm = MagicMock()
 
     if full_pipeline:
-        mock_claude.run.return_value = MockClaudeResponse(
-            text=MOCK_FULL_CONTENT,
-        )
 
         def read_json_effect(slug: str, filename: str) -> dict | list | None:
             if filename == "meta.json":

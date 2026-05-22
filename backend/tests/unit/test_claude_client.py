@@ -75,7 +75,7 @@ async def test_execute_nonzero_exit() -> None:
 async def test_run_retries_on_timeout() -> None:
     call_count = 0
 
-    async def _fake_execute(self, prompt):
+    async def _fake_execute(self, prompt, **_kwargs):
         nonlocal call_count
         call_count += 1
         if call_count < 2:
@@ -97,7 +97,7 @@ async def test_run_retries_on_timeout() -> None:
 async def test_run_retries_on_runtime_error() -> None:
     call_count = 0
 
-    async def _fake_execute(self, prompt):
+    async def _fake_execute(self, prompt, **_kwargs):
         nonlocal call_count
         call_count += 1
         if call_count <= 2:
@@ -117,7 +117,7 @@ async def test_run_retries_on_runtime_error() -> None:
 
 @pytest.mark.asyncio
 async def test_run_exhausts_retries() -> None:
-    async def _fake_execute(self, prompt):
+    async def _fake_execute(self, prompt, **_kwargs):
         raise RuntimeError("always fails")
 
     client = ClaudeClient(cli_path="claude", timeout=10, max_retries=1)
@@ -131,7 +131,7 @@ async def test_run_exhausts_retries() -> None:
 
 @pytest.mark.asyncio
 async def test_run_timeout_override() -> None:
-    async def _fake_execute(self, prompt):
+    async def _fake_execute(self, prompt, **_kwargs):
         return ClaudeResponse(text="ok")
 
     client = ClaudeClient(cli_path="claude", timeout=300)
@@ -144,7 +144,7 @@ async def test_run_timeout_override() -> None:
 
 @pytest.mark.asyncio
 async def test_run_json_parses_response() -> None:
-    async def _fake_execute(self, prompt):
+    async def _fake_execute(self, prompt, **_kwargs):
         return ClaudeResponse(text='{"key": "value"}')
 
     client = ClaudeClient(cli_path="claude")

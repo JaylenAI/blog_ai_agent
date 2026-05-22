@@ -14,6 +14,7 @@ from app.services.pipeline_service import PipelineService
 
 from .conftest import (
     MOCK_CRITIQUE,
+    MOCK_IMAGE_PLAN,
     MockClaudeResponse,
     build_mock_claude,
     build_mock_file_manager,
@@ -144,10 +145,12 @@ async def test_resume_from_gate_one(db_session: AsyncSession) -> None:
     run = runs[0]
 
     resume_claude = build_mock_claude(full_pipeline=True)
-    resume_claude.run_json.side_effect = [MOCK_CRITIQUE["validations"][0]]
-    resume_claude.run.return_value = MockClaudeResponse(
-        text="# Generated Content\n\n" + "가" * 7000
-    )
+    resume_content = "# Generated Content\n\n" + "가" * 7000
+    resume_claude.run_json.side_effect = [
+        {"images": []},
+        MOCK_CRITIQUE,
+    ]
+    resume_claude.run.return_value = MockClaudeResponse(text=resume_content)
     resume_fm = build_mock_file_manager(with_content=True)
 
     resume_service = PipelineService(db_session, resume_claude, resume_fm)
