@@ -22,6 +22,11 @@ const GateModal = lazy(() =>
 const RightPanel = lazy(() =>
   import("./RightPanel").then((m) => ({ default: m.RightPanel })),
 );
+const PublishKitModal = lazy(() =>
+  import("../publish/PublishKitModal").then((m) => ({
+    default: m.PublishKitModal,
+  })),
+);
 
 export function AppShell() {
   const {
@@ -40,6 +45,8 @@ export function AppShell() {
   const theme = useAppStore((s) => s.theme);
   const density = useAppStore((s) => s.density);
   const accentHue = useAppStore((s) => s.accentHue);
+  const publishKitOpen = useAppStore((s) => s.publishKitOpen);
+  const setPublishKitOpen = useAppStore((s) => s.setPublishKitOpen);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -151,6 +158,16 @@ export function AppShell() {
       </Suspense>
 
       <SidebarPanel />
+
+      <Suspense>
+        {activeArticle && publishKitOpen && (
+          <PublishKitModal
+            articleId={activeArticle.id}
+            onClose={() => setPublishKitOpen(false)}
+          />
+        )}
+      </Suspense>
+
       <ToastContainer />
     </div>
   );

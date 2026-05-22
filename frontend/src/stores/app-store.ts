@@ -33,6 +33,7 @@ interface AppState {
   accentHue: number;
   toasts: Toast[];
   sidebarPanel: SidebarPanel;
+  publishKitOpen: boolean;
 
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
@@ -51,6 +52,7 @@ interface AppState {
   addToast: (toast: Omit<Toast, "id">) => void;
   removeToast: (id: string) => void;
   setSidebarPanel: (panel: SidebarPanel) => void;
+  setPublishKitOpen: (open: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -68,6 +70,7 @@ export const useAppStore = create<AppState>((set) => ({
   accentHue: 255,
   toasts: [],
   sidebarPanel: null,
+  publishKitOpen: false,
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
@@ -93,4 +96,5 @@ export const useAppStore = create<AppState>((set) => ({
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
   setSidebarPanel: (panel) =>
     set((s) => ({ sidebarPanel: s.sidebarPanel === panel ? null : panel })),
+  setPublishKitOpen: (open) => set({ publishKitOpen: open }),
 }));

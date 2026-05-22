@@ -1,5 +1,4 @@
 import { useAppStore } from "../../stores/app-store";
-import { api } from "../../api/client";
 import { Icons } from "../common/Icons";
 
 const STAGE_LABELS: Record<
@@ -25,6 +24,7 @@ export function Topbar() {
     gateModal,
     theme,
     setTheme,
+    setPublishKitOpen,
   } = useAppStore();
 
   const stage = STAGE_LABELS[pipelineMode] ?? { txt: "준비", cls: "" };
@@ -71,40 +71,11 @@ export function Topbar() {
         )}
         <button
           className="icon-btn"
-          title="미리보기"
-          onClick={async () => {
-            if (!activeArticle) return;
-            const content = await api.articles.getContent(activeArticle.id);
-            if (!content) {
-              useAppStore.getState().addToast({ type: "info", message: "미리볼 콘텐츠가 없습니다" });
-              return;
-            }
-            const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
-            const url = URL.createObjectURL(blob);
-            window.open(url, "_blank");
-          }}
+          title="발행 준비"
+          disabled={!activeArticle}
+          onClick={() => setPublishKitOpen(true)}
         >
-          <Icons.Eye /> 미리보기
-        </button>
-        <button
-          className="icon-btn"
-          title="HTML 복사"
-          onClick={async () => {
-            if (!activeArticle) return;
-            try {
-              const res = await fetch(`/api/v1/articles/${activeArticle.id}/html`);
-              if (!res.ok) throw new Error("HTML 가져오기 실패");
-              const data = await res.json();
-              if (data.data) {
-                await navigator.clipboard.writeText(data.data);
-                useAppStore.getState().addToast({ type: "success", message: "Tistory HTML이 클립보드에 복사되었습니다" });
-              }
-            } catch {
-              useAppStore.getState().addToast({ type: "error", message: "HTML 콘텐츠를 가져올 수 없습니다" });
-            }
-          }}
-        >
-          <Icons.Share /> HTML
+          <Icons.Send s={14} /> 발행 준비
         </button>
         <button
           className="icon-btn ghost"
