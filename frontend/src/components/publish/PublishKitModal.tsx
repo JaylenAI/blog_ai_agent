@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { useAppStore } from "../../stores/app-store";
 import { Icons } from "../common/Icons";
@@ -128,7 +128,7 @@ function TabContent({
     case "markdown":
       return <MarkdownTab kit={kit} articleId={articleId} copyText={copyText} />;
     case "html":
-      return <HtmlTab kit={kit} copyText={copyText} />;
+      return <HtmlTab kit={kit} articleId={articleId} copyText={copyText} />;
     case "meta":
       return <MetaTab kit={kit} copyText={copyText} />;
     case "images":
@@ -196,25 +196,48 @@ function MarkdownTab({
 
 function HtmlTab({
   kit,
+  articleId,
   copyText,
 }: {
   kit: PublishKit;
+  articleId: number;
   copyText: (text: string, label: string) => Promise<void>;
 }) {
   const [view, setView] = useState<"preview" | "source">("source");
+  const renderRef = useRef<HTMLDivElement>(null);
+  const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
 
-  if (!kit.html) {
+  const htmlContent = kit.html ?? generatedHtml;
+  const isGenerated = !kit.html && !!generatedHtml;
+
+  useEffect(() => {
+    if (!kit.html && kit.markdown && renderRef.current) {
+      const timer = setTimeout(() => {
+        if (renderRef.current) {
+          setGeneratedHtml(renderRef.current.innerHTML);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [kit.html, kit.markdown]);
+
+  if (!kit.html && !kit.markdown) {
     return (
       <EmptyState
         icon={<Icons.Hash s={28} w={1} />}
         title="HTML 콘텐츠 없음"
-        description="Gate 2 승인 후 Publisher 단계에서 HTML이 생성됩니다. 파이프라인을 끝까지 진행해 주세요."
+        description="파이프라인을 실행하여 콘텐츠를 생성해 주세요."
       />
     );
   }
 
   return (
     <div className="pk-content-tab">
+      {!kit.html && kit.markdown && (
+        <div ref={renderRef} style={{ position: "absolute", left: "-9999px", top: 0 }}>
+          <MarkdownRenderer content={kit.markdown} articleId={articleId} />
+        </div>
+      )}
       <div className="pk-toolbar">
         <div className="pk-toolbar-left">
           <button
@@ -229,21 +252,27 @@ function HtmlTab({
           >
             미리보기
           </button>
+          {isGenerated && (
+            <span className="pk-generated-badge">마크다운에서 변환됨</span>
+          )}
         </div>
         <button
           className="pk-copy-btn"
-          onClick={() => copyText(kit.html!, "HTML")}
+          disabled={!htmlContent}
+          onClick={() => htmlContent && copyText(htmlContent, "HTML")}
         >
           <Icons.Share s={13} /> 복사
         </button>
       </div>
       <div className="pk-scroll">
-        {view === "source" ? (
-          <pre className="pk-source">{kit.html}</pre>
+        {!htmlContent ? (
+          <div className="pk-empty">HTML 변환 중...</div>
+        ) : view === "source" ? (
+          <pre className="pk-source">{htmlContent}</pre>
         ) : (
           <iframe
             className="pk-html-preview"
-            srcDoc={kit.html}
+            srcDoc={htmlContent}
             title="HTML Preview"
             sandbox=""
           />
@@ -339,7 +368,7 @@ function MetaRow({
 }
 
 function ImagesTab({ kit }: { kit: PublishKit }) {
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
+  const addToast = useAppStore((s) => s.addToast);
 
   if (kit.images.length === 0 && kit.diagrams.length === 0) {
     return (
@@ -350,6 +379,20 @@ function ImagesTab({ kit }: { kit: PublishKit }) {
       />
     );
   }
+
+  const handleDownload = async (url: string, name: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      addToast({ type: "error", message: "다운로드 실패" });
+    }
+  };
 
   return (
     <div className="pk-images-tab">
@@ -362,13 +405,13 @@ function ImagesTab({ kit }: { kit: PublishKit }) {
             {kit.images.map((img) => (
               <div key={img.name} className="pk-image-card">
                 <a
-                  href={`${BASE_URL}${img.url}`}
+                  href={img.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="pk-image-thumb"
                 >
                   <img
-                    src={`${BASE_URL}${img.url}`}
+                    src={img.url}
                     alt={img.name}
                     loading="lazy"
                   />
@@ -377,14 +420,13 @@ function ImagesTab({ kit }: { kit: PublishKit }) {
                   <span className="pk-image-name" title={img.name}>
                     {img.name}
                   </span>
-                  <a
-                    href={`${BASE_URL}${img.url}`}
-                    download={img.name}
+                  <button
                     className="pk-image-dl"
                     title="다운로드"
+                    onClick={() => handleDownload(img.url, img.name)}
                   >
                     <Icons.ExternalLink s={12} />
-                  </a>
+                  </button>
                 </div>
               </div>
             ))}

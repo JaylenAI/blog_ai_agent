@@ -79,6 +79,10 @@
 .pk-view-btn.active {
   background: var(--accent-soft); color: var(--accent);
 }
+.pk-generated-badge {
+  font-size: 10px; padding: 2px 8px; border-radius: 8px;
+  background: oklch(70% 0.1 60 / 0.15); color: oklch(55% 0.1 60);
+}
 .pk-copy-btn {
   display: flex; align-items: center; gap: 4px;
   padding: 5px 12px; font-size: 12px; font-weight: 500;
