@@ -15,6 +15,7 @@ describe("useAppStore", () => {
       articlesLoading: false,
       toasts: [],
       sidebarPanel: null,
+      publishKitOpen: false,
     });
   });
 
@@ -100,5 +101,13 @@ describe("useAppStore", () => {
     useAppStore.getState().setSidebarPanel("pipelines");
     useAppStore.getState().setSidebarPanel("style-guide");
     expect(useAppStore.getState().sidebarPanel).toBe("style-guide");
+  });
+
+  it("setPublishKitOpen toggles publish kit modal", () => {
+    expect(useAppStore.getState().publishKitOpen).toBe(false);
+    useAppStore.getState().setPublishKitOpen(true);
+    expect(useAppStore.getState().publishKitOpen).toBe(true);
+    useAppStore.getState().setPublishKitOpen(false);
+    expect(useAppStore.getState().publishKitOpen).toBe(false);
   });
 });
