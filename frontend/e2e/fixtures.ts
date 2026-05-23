@@ -53,4 +53,24 @@ export async function mockArticleAPIs(page: Page) {
       body: JSON.stringify({ success: true, data: null }),
     }),
   );
+
+  await mockFormatsAPI(page);
+}
+
+export async function mockFormatsAPI(page: Page) {
+  await page.route("**/api/v1/formats", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true, data: [] }),
+    }),
+  );
+
+  await page.route("**/api/v1/formats/suggest?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true, data: [] }),
+    }),
+  );
 }

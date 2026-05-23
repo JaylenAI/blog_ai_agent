@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { mockFormatsAPI } from "./fixtures";
 
 test.describe("에러 처리", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockFormatsAPI(page);
+  });
+
   test("백엔드 다운 시 에러가 표시되고 크래시하지 않는다", async ({ page }) => {
     await page.route("**/api/v1/articles?*", (route) =>
       route.fulfill({ status: 500, body: "Internal Server Error" }),

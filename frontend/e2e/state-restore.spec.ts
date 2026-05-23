@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { mockFormatsAPI } from "./fixtures";
 
 test.describe("페이지 새로고침 상태 복원", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockFormatsAPI(page);
+  });
+
   test("활성 run이 없으면 Launcher가 표시된다", async ({ page }) => {
     await page.route("**/api/v1/articles?*", (route) =>
       route.fulfill({

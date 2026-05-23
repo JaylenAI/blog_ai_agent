@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockArticleAPIs, MOCK_ARTICLE } from "./fixtures";
+import { mockArticleAPIs, mockFormatsAPI, MOCK_ARTICLE } from "./fixtures";
 
 test.describe("사이드바 내비게이션", () => {
   test.beforeEach(async ({ page }) => {
@@ -12,7 +12,7 @@ test.describe("사이드바 내비게이션", () => {
           data: {
             items: [
               MOCK_ARTICLE,
-              { ...MOCK_ARTICLE, id: 2, topic: "MCP 서버 구축", slug: "mcp-서버-구축" },
+              { ...MOCK_ARTICLE, id: 2, topic: "MCP 서버 구축", title: "MCP 서버 구축", slug: "mcp-서버-구축" },
             ],
             total: 2,
             page: 1,
@@ -29,6 +29,8 @@ test.describe("사이드바 내비게이션", () => {
         body: JSON.stringify({ success: true, data: null }),
       }),
     );
+
+    await mockFormatsAPI(page);
   });
 
   test("아티클 목록이 사이드바에 표시된다", async ({ page }) => {
