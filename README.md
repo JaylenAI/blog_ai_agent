@@ -208,15 +208,15 @@ curl -s http://localhost:8000/api/v1/health/detailed | python3 -m json.tool
 
 ## API 엔드포인트
 
-24개 REST API 엔드포인트를 제공합니다.
+38개 REST API 엔드포인트를 제공합니다.
 
 | 그룹 | 주요 엔드포인트 | 설명 |
 |------|----------------|------|
-| **Health** | `GET /api/v1/health/detailed` | DB, CLI, Mermaid, Obsidian 상태 확인 |
-| **Articles** | `POST /api/v1/articles` | 아티클 CRUD + 버전 관리 (14개) |
-| **Pipeline** | `POST /api/v1/pipeline/start/stream` | 파이프라인 실행, 승인/거부, 재시도 (8개) |
-| **Formats** | `GET /api/v1/formats` | 9개 포맷 조회 + 주제별 추천 |
-| **Settings** | `GET /api/v1/settings/general` | 설정 조회/변경 |
+| **Health** | `GET /api/v1/health/detailed` | DB, CLI, Mermaid, Obsidian 상태 확인 (2개) |
+| **Articles** | `POST /api/v1/articles` | 아티클 CRUD + 버전 관리 + Obsidian 연동 (15개) |
+| **Pipeline** | `POST /api/v1/pipeline/start/stream` | 파이프라인 실행, 승인/거부, 재시도 (12개) |
+| **Formats** | `GET /api/v1/formats` | 9개 포맷 조회 + 주제별 추천 (3개) |
+| **Settings** | `GET /api/v1/settings/general` | 설정 조회/변경 + 스타일 가이드 (6개) |
 
 ---
 
@@ -245,7 +245,7 @@ cd frontend && pnpm lint && pnpm typecheck
 blog_ai_agent/
 ├── backend/                        FastAPI 백엔드
 │   ├── app/
-│   │   ├── api/v1/                 REST API (health, articles, pipeline, formats, settings)
+│   │   ├── api/v1/                 REST API 38개 (health, articles, pipeline, formats, settings)
 │   │   ├── pipeline/stages/        6 Stage (router → researcher → outliner → generator → validator → publisher)
 │   │   ├── pipeline/gates/         Gate 1 (아웃라인), Gate 2 (최종)
 │   │   ├── pipeline/subagents/     4 Librarian (공식문서, GitHub, 영문블로그, 한글블로그)
@@ -258,7 +258,7 @@ blog_ai_agent/
 │
 ├── frontend/                       React + Vite 프론트엔드
 │   ├── src/
-│   │   ├── components/             30개 컴포넌트 (layout, editor, gate, panels, tabs, common)
+│   │   ├── components/             33개 컴포넌트 (layout, editor, gate, panels, tabs, publish, common)
 │   │   ├── stores/                 6개 Zustand 스토어 + Facade 패턴
 │   │   ├── hooks/                  5개 커스텀 훅 (SSE, 반응형, 파이프라인 액션)
 │   │   ├── api/                    API 클라이언트 + zod 스키마 검증

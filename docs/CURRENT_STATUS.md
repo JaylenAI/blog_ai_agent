@@ -5,11 +5,11 @@
 | 영역 | 상태 | 상세 |
 |------|------|------|
 | 백엔드 파이프라인 | ✅ 완료 | 6 Stage + 2 Gate 전체 구현 (Router→Researcher→Outliner→Gate1→Generator→Validator→Gate2→Publisher) |
-| 백엔드 테스트 | ✅ 502건, 90% | pytest + pytest-cov (32 테스트 파일) |
-| 프론트엔드 컴포넌트 | ✅ 30개 | 3-pane 워크스페이스, Launcher, Gate 모달 등 |
+| 백엔드 테스트 | ✅ 502건, 90% | pytest + pytest-cov (34 테스트 파일) |
+| 프론트엔드 컴포넌트 | ✅ 33개 | 3-pane 워크스페이스, Launcher, Gate 모달, PublishKit 등 |
 | 프론트엔드 테스트 | ✅ 344건 (32파일) | 컴포넌트 19 + 훅 5 + 스토어 6 + API 2 |
 | 프론트엔드 스토어/훅 | ✅ 완료 | Zustand 6 스토어, 커스텀 훅 5개 |
-| API 엔드포인트 | ✅ 24개 | articles, pipeline, health, formats, settings |
+| API 엔드포인트 | ✅ 38개 | articles 15 + pipeline 12 + settings 6 + formats 3 + health 2 |
 | SSE 실시간 스트리밍 | ✅ 완료 | REST → SSE 전환, 재연결 로직 포함 |
 | Zod 유효성 검증 | ✅ 완료 | API 응답 스키마 전체 적용 |
 | E2E 테스트 | ✅ 16건 | Playwright 5 시나리오 (앱 로딩, SSE 플로우, 사이드바, 에러 처리, 상태 복원) |
@@ -32,7 +32,9 @@
 
 ## 최근 작업
 
-- README.md 전면 개편 (뱃지, 기능 그리드, Mermaid 아키텍처)
+- CI/CD 전체 안정화 (백엔드 mermaid mock, highlight.js 의존성, E2E formats mock)
+- E2E 테스트 안정화 — mockFormatsAPI 헬퍼 추가, sidebar mock 데이터 보정
+- README.md 전면 개편 (SVG 배너, 데모 GIF, 파이프라인 다이어그램, 스크린샷)
 - CONTRIBUTING.md 신규 작성
 - CI 린트 에러 해소 (ruff unused imports, pnpm 버전 고정)
 - ESLint `no-explicit-any` 16건 전체 수정
@@ -67,4 +69,4 @@
 | HTML+CSS 썸네일 자동화 | 낮음 | M8 |
 | Tistory 자동 로그인 | 금지 | 보안 정책상 수동 로그인만 허용 |
 | 실제 Claude CLI E2E | 수동 | docs/09-manual-test-scenarios.md 참조 |
-| v0.1.0 태깅 | 대기 | main 머지 시 |
+| v0.1.0 태깅 | 대기 | main 머지 완료, 태그 생성 예정 |
