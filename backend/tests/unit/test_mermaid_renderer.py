@@ -16,7 +16,10 @@ async def test_render_mermaid_success(tmp_path: Path) -> None:
     mock_proc.communicate.return_value = (b"", b"")
     mock_proc.returncode = 0
 
-    with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+    with (
+        patch("app.images.mermaid_renderer.shutil.which", return_value="/usr/bin/mmdc"),
+        patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+    ):
         result = await render_mermaid(mmd_path, output_path)
 
     assert result is True
@@ -32,7 +35,10 @@ async def test_render_mermaid_failure(tmp_path: Path) -> None:
     mock_proc.communicate.return_value = (b"", b"Parse error")
     mock_proc.returncode = 1
 
-    with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+    with (
+        patch("app.images.mermaid_renderer.shutil.which", return_value="/usr/bin/mmdc"),
+        patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+    ):
         result = await render_mermaid(mmd_path, output_path)
 
     assert result is False
@@ -59,7 +65,10 @@ async def test_render_mermaid_timeout(tmp_path: Path) -> None:
     mock_proc = AsyncMock()
     mock_proc.communicate.side_effect = TimeoutError()
 
-    with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+    with (
+        patch("app.images.mermaid_renderer.shutil.which", return_value="/usr/bin/mmdc"),
+        patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+    ):
         result = await render_mermaid(mmd_path, output_path)
 
     assert result is False
@@ -82,7 +91,10 @@ async def test_render_all_diagrams_success(tmp_path: Path) -> None:
     mock_proc.communicate.return_value = (b"", b"")
     mock_proc.returncode = 0
 
-    with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+    with (
+        patch("app.images.mermaid_renderer.shutil.which", return_value="/usr/bin/mmdc"),
+        patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+    ):
         results = await render_all_diagrams(tmp_path)
 
     assert len(results) == 2
