@@ -11,16 +11,11 @@ from app.exceptions import NotFoundError
 from app.formats.registry import FormatRegistry, get_format_registry
 from app.formats.schema import (
     CharCountSpec,
-    ElementSpec,
     FormatSpec,
     FormatSuggestion,
     FormatSummary,
     RangeSpec,
-    SeoSpec,
-    StructureSpec,
-    ValidationSpec,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
