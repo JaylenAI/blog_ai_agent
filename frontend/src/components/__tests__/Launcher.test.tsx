@@ -44,7 +44,7 @@ describe("Launcher", () => {
     fireEvent.change(textarea, { target: { value: "테스트 주제" } });
     const submitBtn = screen.getByText("생성 시작").closest("button")!;
     fireEvent.click(submitBtn);
-    expect(mockOnStart).toHaveBeenCalledWith("테스트 주제", expect.any(Boolean), expect.any(String));
+    expect(mockOnStart).toHaveBeenCalledWith("테스트 주제", expect.any(Boolean), expect.any(String), expect.any(String));
   });
 
   it("disables everything when disabled prop is true", () => {
@@ -63,7 +63,7 @@ describe("Launcher", () => {
     render(<Launcher onStart={mockOnStart} disabled={false} />);
     const card = screen.getByText("MCP 서버 직접 구축하기").closest("button")!;
     fireEvent.click(card);
-    expect(mockOnStart).toHaveBeenCalledWith("MCP 서버 직접 구축하기", expect.any(Boolean), "tutorial");
+    expect(mockOnStart).toHaveBeenCalledWith("MCP 서버 직접 구축하기", expect.any(Boolean), "tutorial", expect.any(String));
   });
 
   it("renders auto format button", () => {

@@ -1,20 +1,47 @@
-# 현재 상태 (2026-05-21)
+# 현재 상태 (2026-05-23)
 
 ## 전체 진행률
 
 | 영역 | 상태 | 상세 |
 |------|------|------|
-| 6 Stage 파이프라인 | ✅ 100% | Router→Researcher→Outliner→Generator→Validator→Publisher |
-| 단위 테스트 | ✅ 285건, 91.59% | pytest + pytest-cov |
-| E2E 테스트 | ✅ 9건 | Playwright (앱 로딩, SSE 플로우, 상태 복원) |
-| SSE 실시간 스트리밍 | ✅ 완료 | REST → SSE 전환 완료 |
-| 페이지 새로고침 복원 | ✅ 완료 | active run 자동 감지 |
-| Health Check 상세 | ✅ 완료 | Claude CLI + mmdc + Obsidian vault |
-| Docker | ✅ 완료 | docker-compose.yml (backend + frontend) |
+| 백엔드 파이프라인 | ✅ 완료 | 6 Stage + 2 Gate 전체 구현 (Router→Researcher→Outliner→Gate1→Generator→Validator→Gate2→Publisher) |
+| 백엔드 테스트 | ✅ 470건, 89.95% | pytest + pytest-cov |
+| 프론트엔드 컴포넌트 | ✅ 30개 | 3-pane 워크스페이스, Launcher, Gate 모달 등 |
+| 프론트엔드 테스트 | ✅ 261+건 (32파일) | 컴포넌트 19 + 훅 5 + 스토어 6 + API 2 |
+| 프론트엔드 스토어/훅 | ✅ 완료 | Zustand 6 스토어, 커스텀 훅 5개 |
+| API 엔드포인트 | ✅ 24개 | articles, pipeline, health, formats, settings |
+| SSE 실시간 스트리밍 | ✅ 완료 | REST → SSE 전환, 재연결 로직 포함 |
+| Zod 유효성 검증 | ✅ 완료 | API 응답 스키마 전체 적용 |
+| E2E 테스트 | ✅ 16건 | Playwright (앱 로딩, SSE 플로우, 사이드바, 에러 처리, 상태 복원) |
+| Docker | ✅ 완료 | docker-compose.yml (backend + frontend + healthcheck) |
 | CI/CD | ✅ 완료 | GitHub Actions (test + lint + e2e) |
-| 환경 분리 | ✅ 완료 | .env.development / .env.production |
+| Rate Limiting | ✅ 완료 | API 미들웨어 적용 |
+| Graceful Shutdown | ✅ 완료 | 시그널 핸들링 |
+| Health Check | ✅ 완료 | Claude CLI + mmdc + Obsidian vault 상세 점검 |
 | Code Splitting | ✅ 완료 | 561KB → 213KB (메인 번들) |
-| 수동 테스트 시나리오 | ✅ 완료 | docs/09-manual-test-scenarios.md |
+| 환경 분리 | ✅ 완료 | .env.development / .env.production |
+
+## 최근 작업
+
+- ESLint 오류 전체 수정 완료
+- 컴포넌트 테스트 커버리지 확대 (19개 컴포넌트 테스트 파일)
+- SSE 재연결 방어 로직 개선 (optional chaining 적용)
+
+## Phase 완료 현황
+
+| Phase | 문서 | 상태 | 마일스톤 |
+|-------|------|------|----------|
+| Phase 0 | `00-elevator-pitch.md` | ✅ 완료 | M1 |
+| Phase 1 | `01-problem-statement.md` | ✅ 완료 | M1 |
+| Phase 2 | `02-benchmark.md` | ✅ 완료 | M1 |
+| Phase 3 | `03-team-and-roles.md` | ✅ 완료 | M1 |
+| Phase 4 | `04-requirements.md` | ✅ 완료 | M1 |
+| Phase 5 | `05-architecture/` (7문서) | ✅ 완료 | M1 |
+| Phase 6 | `06-ux-design.md` | ✅ 완료 | M2 |
+| Phase 7 | `07-project-setup.md` | ✅ 완료 | M2 |
+| Phase 8 | `08-milestones.md` | ✅ 완료 | M2 |
+| Phase 9~16 | 파이프라인 코어 ~ QA/배포 | ✅ 완료 | M3~M6 |
+| Phase 17~22 | 프론트엔드 구현 + 테스트 보강 | ✅ 완료 | M6 |
 
 ## 미구현 / 향후 과제
 
@@ -22,30 +49,8 @@
 |------|---------|------|
 | 주제 큐 (예약 발행) | 중 | M8 |
 | 발행 후 Analytics | 낮음 | M8 |
+| Playwright 반자동 발행 | 중 | M8 |
+| HTML+CSS 썸네일 자동화 | 낮음 | M8 |
 | Tistory 자동 로그인 | 금지 | 보안 정책상 수동 로그인만 허용 |
 | 실제 Claude CLI E2E | 수동 | docs/09-manual-test-scenarios.md 참조 |
 | v0.1.0 태깅 | 대기 | main 머지 시 |
-
-## 최근 완료 Phase
-
-### Phase 7: SSE 실시간 연동 + 상태 복원
-- AppShell handleStart → SSE 스트리밍
-- approveGate → SSE 스트리밍
-- use-restore-pipeline 훅 (페이지 새로고침 복원)
-- GET /pipeline/runs/active 엔드포인트
-- .env.example 생성
-
-### Phase 8: E2E 테스트 + 수동 테스트
-- Playwright 9건 (앱 로딩 4 + SSE 플로우 3 + 상태 복원 2)
-- 상세 health check (Claude CLI, mmdc, Obsidian vault)
-- 수동 테스트 시나리오 문서 8건
-
-### Phase 9: Docker + CI/CD + 환경 분리
-- backend/Dockerfile, frontend/Dockerfile + nginx.conf
-- docker-compose.yml (healthcheck 포함)
-- .github/workflows/ci.yml (3 jobs)
-- React.lazy code splitting
-
-### Phase 10: 최종 QA + 문서
-- README 업데이트 (빠른 시작 가이드 추가)
-- CURRENT_STATUS.md 작성

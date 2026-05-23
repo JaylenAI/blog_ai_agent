@@ -26,7 +26,7 @@ async def test_full_flow_gate_one_pause(integration_client: AsyncClient) -> None
     create_resp = await integration_client.post(
         "/api/v1/articles", json={"topic": "LLM이란 무엇인가"}
     )
-    assert create_resp.status_code == 200
+    assert create_resp.status_code == 201
     article_id = create_resp.json()["data"]["id"]
 
     start_resp = await integration_client.post(

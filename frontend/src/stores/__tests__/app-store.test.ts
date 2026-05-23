@@ -1,19 +1,32 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useAppStore } from "../app-store";
+import { useUIStore } from "../ui-store";
+import { useArticleStore } from "../article-store";
+import { useToastStore } from "../toast-store";
+import type { Article } from "../../types/article";
 
-describe("useAppStore", () => {
+function makeArticle(overrides: Partial<Article> & { id: number }): Article {
+  return {
+    slug: "test",
+    title: null,
+    topic: "test",
+    category: null,
+    format_id: "standard",
+    status: "draft",
+    content_path: null,
+    word_count: 0,
+    image_count: 0,
+    created_at: "2026-01-01T00:00:00",
+    updated_at: "2026-01-01T00:00:00",
+    ...overrides,
+  };
+}
+
+describe("useUIStore", () => {
   beforeEach(() => {
-    useAppStore.setState({
+    useUIStore.setState({
       sidebarOpen: true,
       rightPanelOpen: true,
       rightPanelTab: "pipeline",
-      activeArticle: null,
-      pipelineMode: "idle",
-      articles: [],
-      articleContent: null,
-      gateModal: null,
-      articlesLoading: false,
-      toasts: [],
       sidebarPanel: null,
       publishKitOpen: false,
       editorMode: "view",
@@ -22,112 +35,122 @@ describe("useAppStore", () => {
   });
 
   it("toggleSidebar flips sidebarOpen", () => {
-    expect(useAppStore.getState().sidebarOpen).toBe(true);
-    useAppStore.getState().toggleSidebar();
-    expect(useAppStore.getState().sidebarOpen).toBe(false);
-    useAppStore.getState().toggleSidebar();
-    expect(useAppStore.getState().sidebarOpen).toBe(true);
+    expect(useUIStore.getState().sidebarOpen).toBe(true);
+    useUIStore.getState().toggleSidebar();
+    expect(useUIStore.getState().sidebarOpen).toBe(false);
+    useUIStore.getState().toggleSidebar();
+    expect(useUIStore.getState().sidebarOpen).toBe(true);
   });
 
   it("toggleRightPanel flips rightPanelOpen", () => {
-    expect(useAppStore.getState().rightPanelOpen).toBe(true);
-    useAppStore.getState().toggleRightPanel();
-    expect(useAppStore.getState().rightPanelOpen).toBe(false);
+    expect(useUIStore.getState().rightPanelOpen).toBe(true);
+    useUIStore.getState().toggleRightPanel();
+    expect(useUIStore.getState().rightPanelOpen).toBe(false);
   });
 
   it("setRightPanelTab changes tab", () => {
-    useAppStore.getState().setRightPanelTab("references");
-    expect(useAppStore.getState().rightPanelTab).toBe("references");
+    useUIStore.getState().setRightPanelTab("references");
+    expect(useUIStore.getState().rightPanelTab).toBe("references");
+  });
+
+  it("setTheme and setDensity update display settings", () => {
+    useUIStore.getState().setTheme("dark");
+    expect(useUIStore.getState().theme).toBe("dark");
+    useUIStore.getState().setDensity("compact");
+    expect(useUIStore.getState().density).toBe("compact");
+  });
+
+  it("setSidebarPanel toggles panel", () => {
+    useUIStore.getState().setSidebarPanel("pipelines");
+    expect(useUIStore.getState().sidebarPanel).toBe("pipelines");
+    useUIStore.getState().setSidebarPanel("pipelines");
+    expect(useUIStore.getState().sidebarPanel).toBeNull();
+  });
+
+  it("setSidebarPanel switches to different panel", () => {
+    useUIStore.getState().setSidebarPanel("pipelines");
+    useUIStore.getState().setSidebarPanel("style-guide");
+    expect(useUIStore.getState().sidebarPanel).toBe("style-guide");
+  });
+
+  it("setPublishKitOpen toggles publish kit modal", () => {
+    expect(useUIStore.getState().publishKitOpen).toBe(false);
+    useUIStore.getState().setPublishKitOpen(true);
+    expect(useUIStore.getState().publishKitOpen).toBe(true);
+    useUIStore.getState().setPublishKitOpen(false);
+    expect(useUIStore.getState().publishKitOpen).toBe(false);
+  });
+
+  it("setEditorMode switches modes and clears draft on view", () => {
+    useUIStore.getState().setEditDraft("# hello");
+    useUIStore.getState().setEditorMode("edit");
+    expect(useUIStore.getState().editorMode).toBe("edit");
+    useUIStore.getState().setEditorMode("view");
+    expect(useUIStore.getState().editorMode).toBe("view");
+    expect(useUIStore.getState().editDraft).toBeNull();
+  });
+});
+
+describe("useArticleStore", () => {
+  beforeEach(() => {
+    useArticleStore.setState({
+      activeArticle: null,
+      pipelineMode: "idle",
+      articles: [],
+      articleContent: null,
+      gateModal: null,
+      articlesLoading: false,
+    });
   });
 
   it("setActiveArticle clears articleContent", () => {
-    useAppStore.setState({ articleContent: "some content" });
-    const article = { id: 1, slug: "test", topic: "test", status: "draft" } as any;
-    useAppStore.getState().setActiveArticle(article);
-    expect(useAppStore.getState().activeArticle).toEqual(article);
-    expect(useAppStore.getState().articleContent).toBeNull();
+    useArticleStore.setState({ articleContent: "some content" });
+    const article = makeArticle({ id: 1, slug: "test", topic: "test", status: "draft" });
+    useArticleStore.getState().setActiveArticle(article);
+    expect(useArticleStore.getState().activeArticle).toEqual(article);
+    expect(useArticleStore.getState().articleContent).toBeNull();
   });
 
   it("addArticle prepends to articles array", () => {
-    const a1 = { id: 1, slug: "a1", topic: "first" } as any;
-    const a2 = { id: 2, slug: "a2", topic: "second" } as any;
-    useAppStore.getState().addArticle(a1);
-    useAppStore.getState().addArticle(a2);
-    const articles = useAppStore.getState().articles;
+    const a1 = makeArticle({ id: 1, slug: "a1", topic: "first" });
+    const a2 = makeArticle({ id: 2, slug: "a2", topic: "second" });
+    useArticleStore.getState().addArticle(a1);
+    useArticleStore.getState().addArticle(a2);
+    const articles = useArticleStore.getState().articles;
     expect(articles).toHaveLength(2);
     expect(articles[0]!.id).toBe(2);
   });
 
   it("openGateModal and closeGateModal work correctly", () => {
-    useAppStore.getState().openGateModal("gate_one", 42);
-    expect(useAppStore.getState().gateModal).toEqual({ gate: "gate_one", runId: 42 });
-    useAppStore.getState().closeGateModal();
-    expect(useAppStore.getState().gateModal).toBeNull();
+    useArticleStore.getState().openGateModal("gate_one", 42);
+    expect(useArticleStore.getState().gateModal).toEqual({ gate: "gate_one", runId: 42 });
+    useArticleStore.getState().closeGateModal();
+    expect(useArticleStore.getState().gateModal).toBeNull();
+  });
+
+  it("setPipelineMode updates mode", () => {
+    useArticleStore.getState().setPipelineMode("research");
+    expect(useArticleStore.getState().pipelineMode).toBe("research");
+  });
+});
+
+describe("useToastStore", () => {
+  beforeEach(() => {
+    useToastStore.setState({ toasts: [] });
   });
 
   it("addToast creates toast with unique id", () => {
-    useAppStore.getState().addToast({ type: "error", message: "test error" });
-    const toasts = useAppStore.getState().toasts;
+    useToastStore.getState().addToast({ type: "error", message: "test error" });
+    const toasts = useToastStore.getState().toasts;
     expect(toasts).toHaveLength(1);
     expect(toasts[0]!.type).toBe("error");
     expect(toasts[0]!.id).toBeTruthy();
   });
 
   it("removeToast removes by id", () => {
-    useAppStore.getState().addToast({ type: "success", message: "ok" });
-    const id = useAppStore.getState().toasts[0]!.id;
-    useAppStore.getState().removeToast(id);
-    expect(useAppStore.getState().toasts).toHaveLength(0);
-  });
-
-  it("setPipelineMode updates mode", () => {
-    useAppStore.getState().setPipelineMode("research");
-    expect(useAppStore.getState().pipelineMode).toBe("research");
-  });
-
-  it("setTheme and setDensity update display settings", () => {
-    useAppStore.getState().setTheme("dark");
-    expect(useAppStore.getState().theme).toBe("dark");
-    useAppStore.getState().setDensity("compact");
-    expect(useAppStore.getState().density).toBe("compact");
-  });
-
-  it("setSidebarPanel toggles panel", () => {
-    useAppStore.getState().setSidebarPanel("pipelines");
-    expect(useAppStore.getState().sidebarPanel).toBe("pipelines");
-    useAppStore.getState().setSidebarPanel("pipelines");
-    expect(useAppStore.getState().sidebarPanel).toBeNull();
-  });
-
-  it("setSidebarPanel switches to different panel", () => {
-    useAppStore.getState().setSidebarPanel("pipelines");
-    useAppStore.getState().setSidebarPanel("style-guide");
-    expect(useAppStore.getState().sidebarPanel).toBe("style-guide");
-  });
-
-  it("setPublishKitOpen toggles publish kit modal", () => {
-    expect(useAppStore.getState().publishKitOpen).toBe(false);
-    useAppStore.getState().setPublishKitOpen(true);
-    expect(useAppStore.getState().publishKitOpen).toBe(true);
-    useAppStore.getState().setPublishKitOpen(false);
-    expect(useAppStore.getState().publishKitOpen).toBe(false);
-  });
-
-  it("setEditorMode switches modes and clears draft on view", () => {
-    useAppStore.getState().setEditDraft("# hello");
-    useAppStore.getState().setEditorMode("edit");
-    expect(useAppStore.getState().editorMode).toBe("edit");
-    useAppStore.getState().setEditorMode("view");
-    expect(useAppStore.getState().editorMode).toBe("view");
-    expect(useAppStore.getState().editDraft).toBeNull();
-  });
-
-  it("setActiveArticle resets editor mode", () => {
-    useAppStore.getState().setEditorMode("edit");
-    useAppStore.getState().setEditDraft("# draft");
-    const article = { id: 1, slug: "test", topic: "test", status: "draft" } as any;
-    useAppStore.getState().setActiveArticle(article);
-    expect(useAppStore.getState().editorMode).toBe("view");
-    expect(useAppStore.getState().editDraft).toBeNull();
+    useToastStore.getState().addToast({ type: "success", message: "ok" });
+    const id = useToastStore.getState().toasts[0]!.id;
+    useToastStore.getState().removeToast(id);
+    expect(useToastStore.getState().toasts).toHaveLength(0);
   });
 });

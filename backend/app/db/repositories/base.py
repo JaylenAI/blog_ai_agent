@@ -40,6 +40,11 @@ class BaseRepository(Generic[T]):
         await self._session.refresh(entity)
         return entity
 
+    async def update(self, entity: T) -> T:
+        await self._session.flush()
+        await self._session.refresh(entity)
+        return entity
+
     async def delete(self, entity: T) -> None:
         await self._session.delete(entity)
         await self._session.flush()

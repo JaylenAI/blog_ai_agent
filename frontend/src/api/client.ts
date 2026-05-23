@@ -6,22 +6,75 @@ import type {
   ValidationItem,
   ValidationSummary,
 } from "../types/pipeline";
+import type {
+  PublishKit,
+  ObsidianSettings,
+  GeneralSettings,
+  BatchUpdateRequest,
+} from "../types/publish";
+import { ApiError, NetworkError } from "./errors";
+import type { z } from "zod";
+import {
+  ArticleSchema,
+  ArticleListSchema,
+  PipelineRunSchema,
+  ValidationResultSchema,
+  BlogFormatSchema,
+  FormatSuggestionSchema,
+  PublishKitSchema,
+  ObsidianSettingsSchema,
+  GeneralSettingsSchema,
+} from "./schemas";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 async function request<T>(
   path: string,
   options: RequestInit = {},
+  schema?: z.ZodType<T>,
 ): Promise<ApiResponse<T>> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
-  });
-  return (await res.json()) as ApiResponse<T>;
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      headers: { "Content-Type": "application/json", ...options.headers },
+      ...options,
+    });
+  } catch {
+    throw new NetworkError();
+  }
+
+  if (!res.ok) {
+    let message = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body?.error) message = body.error;
+    } catch { /* ignore parse failure */ }
+    throw new ApiError(res.status, message);
+  }
+
+  const json = (await res.json()) as ApiResponse<T>;
+
+  if (schema && json.data != null) {
+    const result = schema.safeParse(json.data);
+    if (!result.success) {
+      if (import.meta.env.DEV) {
+        console.warn("[API] validation failed:", path, result.error.issues);
+      }
+    } else {
+      return { ...json, data: result.data };
+    }
+  }
+
+  return json;
 }
 
 async function requestText(path: string): Promise<string | null> {
-  const res = await fetch(`${BASE_URL}${path}`);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`);
+  } catch {
+    throw new NetworkError();
+  }
   if (!res.ok) return null;
   return res.text();
 }
@@ -31,14 +84,17 @@ export const api = {
     list: (page = 1, limit = 20) =>
       request<{ items: Article[]; total: number; page: number; limit: number }>(
         `/articles?page=${page}&limit=${limit}`,
+        {},
+        ArticleListSchema,
       ),
-    get: (id: number) => request<Article>(`/articles/${id}`),
+    get: (id: number) => request<Article>(`/articles/${id}`, {}, ArticleSchema),
     create: (topic: string, title?: string, formatId?: string) =>
       request<Article>("/articles", {
         method: "POST",
         body: JSON.stringify({ topic, title, format_id: formatId }),
-      }),
+      }, ArticleSchema),
     getContent: (id: number) => requestText(`/articles/${id}/content`),
+    getHtml: (id: number) => requestText(`/articles/${id}/html`),
     listImages: (id: number) =>
       request<string[]>(`/articles/${id}/images`),
     imageUrl: (id: number, filename: string) =>
@@ -69,29 +125,20 @@ export const api = {
       request<Article>(`/articles/${id}`, {
         method: "PATCH",
         body: JSON.stringify(data),
-      }),
+      }, ArticleSchema),
   },
 
   publishKit: {
-    get: (id: number) =>
-      request<{
-        title: string;
-        category: string;
-        tags: string[];
-        markdown: string | null;
-        html: string | null;
-        images: { name: string; url: string }[];
-        diagrams: { name: string; content: string }[];
-        word_count: number;
-        status: string;
-      }>(`/articles/${id}/publish-kit`),
+    get: (id: number) => request<PublishKit>(`/articles/${id}/publish-kit`, {}, PublishKitSchema),
   },
 
   formats: {
-    list: () => request<BlogFormat[]>("/formats"),
+    list: () => request<BlogFormat[]>("/formats", {}, BlogFormatSchema.array()),
     suggest: (topic: string) =>
       request<FormatSuggestion[]>(
         `/formats/suggest?topic=${encodeURIComponent(topic)}`,
+        {},
+        FormatSuggestionSchema.array(),
       ),
   },
 
@@ -114,12 +161,14 @@ export const api = {
       request<{ status: string }>(`/pipeline/runs/${runId}/reject`, {
         method: "POST",
       }),
-    getRun: (runId: number) => request<PipelineRun>(`/pipeline/runs/${runId}`),
+    getRun: (runId: number) => request<PipelineRun>(`/pipeline/runs/${runId}`, {}, PipelineRunSchema),
     getActiveRun: () =>
-      request<PipelineRun | null>("/pipeline/runs/active"),
+      request<PipelineRun | null>("/pipeline/runs/active", {}, PipelineRunSchema.nullable()),
     getValidations: (runId: number) =>
       request<{ validations: ValidationItem[]; summary: ValidationSummary }>(
         `/pipeline/runs/${runId}/validations`,
+        {},
+        ValidationResultSchema,
       ),
     cancel: (runId: number) =>
       request<{ status: string }>(`/pipeline/runs/${runId}/cancel`, {
@@ -130,39 +179,27 @@ export const api = {
       if (articleId != null) params.set("article_id", String(articleId));
       params.set("limit", String(limit));
       params.set("offset", String(offset));
-      return request<PipelineRun[]>(`/pipeline/runs?${params}`);
+      return request<PipelineRun[]>(`/pipeline/runs?${params}`, {}, PipelineRunSchema.array());
     },
   },
 
   settings: {
     getStyleGuide: () => requestText("/settings/style-guide"),
     getObsidian: () =>
-      request<{ vault_path: string; frontmatter_tags: string[]; auto_save: boolean }>("/settings/obsidian"),
-    updateObsidian: (data: { vault_path: string; frontmatter_tags: string[]; auto_save: boolean }) =>
-      request<typeof data>("/settings/obsidian", {
+      request<ObsidianSettings>("/settings/obsidian", {}, ObsidianSettingsSchema),
+    updateObsidian: (data: ObsidianSettings) =>
+      request<ObsidianSettings>("/settings/obsidian", {
         method: "PUT",
         body: JSON.stringify(data),
-      }),
+      }, ObsidianSettingsSchema),
     getGeneral: () =>
-      request<{
-        tistory_blog_url: string;
-        stage_timeout: number;
-        image_generation_enabled: boolean;
-        max_images_per_article: number;
-        log_level: string;
-      }>("/settings/general"),
-    updateGeneral: (data: {
-      tistory_blog_url: string;
-      stage_timeout: number;
-      image_generation_enabled: boolean;
-      max_images_per_article: number;
-      log_level: string;
-    }) =>
-      request<typeof data>("/settings/general", {
+      request<GeneralSettings>("/settings/general", {}, GeneralSettingsSchema),
+    updateGeneral: (data: GeneralSettings) =>
+      request<GeneralSettings>("/settings/general", {
         method: "PUT",
         body: JSON.stringify(data),
-      }),
-    batchUpdate: (data: { article_ids: number[]; category?: string; tags?: string[]; status?: string }) =>
+      }, GeneralSettingsSchema),
+    batchUpdate: (data: BatchUpdateRequest) =>
       request<{ updated: number }>("/settings/batch-update", {
         method: "POST",
         body: JSON.stringify(data),

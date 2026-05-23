@@ -4,6 +4,7 @@ from pathlib import Path
 
 import yaml
 
+from app.exceptions import NotFoundError
 from app.formats.schema import FormatSpec, FormatSuggestion, FormatSummary
 from app.utils.logger import get_logger
 
@@ -41,7 +42,7 @@ class FormatRegistry:
         if format_id not in self._formats:
             if "concept" in self._formats:
                 return self._formats["concept"]
-            raise KeyError(f"형식 '{format_id}'를 찾을 수 없습니다")
+            raise NotFoundError(f"형식 '{format_id}'를 찾을 수 없습니다")
         return self._formats[format_id]
 
     def list_all(self) -> list[FormatSpec]:

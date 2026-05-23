@@ -1,15 +1,17 @@
-import { lazy, Suspense, useCallback, useEffect } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
 import { useArticles } from "../../hooks/use-articles";
 import { usePipelineSSE } from "../../hooks/use-pipeline-sse";
 import { useRestorePipeline } from "../../hooks/use-restore-pipeline";
+import { useIsMobile, useIsTablet } from "../../hooks/use-media-query";
 import { api } from "../../api/client";
 import { Sidebar } from "./Sidebar";
 import { SidebarPanel } from "./SidebarPanel";
 import { Topbar } from "./Topbar";
 import { Launcher } from "../editor/Launcher";
 import { ToastContainer } from "../common/ToastContainer";
+import { LoadingSpinner } from "../common/LoadingSpinner";
 import type { Article } from "../../types/article";
 import type { PipelineEvent } from "../../types/pipeline";
 
@@ -66,8 +68,29 @@ export function AppShell() {
   const { startStream } = usePipelineSSE();
   useRestorePipeline();
 
+  const [contentLoading, setContentLoading] = useState(false);
+  const contentFetchId = useRef(0);
+
+  useEffect(() => {
+    if (!activeArticle) return;
+    const fetchId = ++contentFetchId.current;
+    setContentLoading(true);
+    api.articles
+      .getContent(activeArticle.id)
+      .then((content) => {
+        if (fetchId !== contentFetchId.current) return;
+        setArticleContent(content);
+      })
+      .catch(() => {
+        if (fetchId !== contentFetchId.current) return;
+      })
+      .finally(() => {
+        if (fetchId === contentFetchId.current) setContentLoading(false);
+      });
+  }, [activeArticle, setArticleContent]);
+
   const handleStart = useCallback(
-    async (topic: string, autoGateOne: boolean, formatId: string) => {
+    async (topic: string, autoGateOne: boolean, formatId: string, length: "standard" | "long" = "standard") => {
       setPipelineMode("research");
 
       try {
@@ -86,6 +109,7 @@ export function AppShell() {
               article_id: article.id,
               auto_gate_one: autoGateOne,
               format_id: formatId,
+              length,
             }),
           },
           {
@@ -124,21 +148,42 @@ export function AppShell() {
   const isRunning = usePipelineStore((s) => s.isRunning);
   const error = usePipelineStore((s) => s.error);
 
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isMobile) setMobileSidebarOpen(false);
+  }, [isMobile]);
+
   return (
     <div
       className="app"
       data-sidebar={sidebarOpen ? "open" : "collapsed"}
       data-right={rightPanelOpen ? "shown" : "hidden"}
     >
-      <Sidebar />
-      <Topbar />
+      <Sidebar className={mobileSidebarOpen ? "open" : ""} />
+      {isMobile && mobileSidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+      <Topbar
+        hamburger={isMobile}
+        onHamburgerClick={() => setMobileSidebarOpen((v) => !v)}
+      />
 
       <main className="main">
-        {error && <div className="error-banner">{error}</div>}
+        {error && <div className="error-banner">{error.length > 200 ? `${error.slice(0, 200)}…` : error}</div>}
 
         <Suspense>
           {activeArticle ? (
-            <Editor article={activeArticle} />
+            contentLoading ? (
+              <LoadingSpinner message="콘텐츠 불러오는 중..." />
+            ) : (
+              <Editor article={activeArticle} />
+            )
           ) : (
             <Launcher onStart={handleStart} disabled={isRunning} />
           )}
@@ -146,7 +191,7 @@ export function AppShell() {
       </main>
 
       <Suspense>
-        <RightPanel />
+        <RightPanel className={isTablet && rightPanelOpen ? "open" : ""} />
 
         {gateModal && (
           <GateModal

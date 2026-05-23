@@ -55,3 +55,7 @@ async def get_pipeline_service(
     fm: FileManager = Depends(get_file_manager),
 ) -> PipelineService:
     return PipelineService(db, claude, fm)
+
+
+def create_pipeline_service(session: AsyncSession) -> PipelineService:
+    return PipelineService(session, ClaudeClient(), FileManager())

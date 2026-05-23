@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.base import BaseRepository
-from app.models.pipeline_run import PipelineRun
+from app.models.pipeline_run import PipelineRun, PipelineStatus
 
 
 class PipelineRepository(BaseRepository[PipelineRun]):
@@ -46,7 +46,7 @@ class PipelineRepository(BaseRepository[PipelineRun]):
 
     async def find_running(self) -> list[PipelineRun]:
         stmt = select(PipelineRun).where(
-            PipelineRun.status == "running"
+            PipelineRun.status == PipelineStatus.RUNNING
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
@@ -55,7 +55,11 @@ class PipelineRepository(BaseRepository[PipelineRun]):
         stmt = (
             select(PipelineRun)
             .where(
-                PipelineRun.status.in_(["running", "paused", "pending"])
+                PipelineRun.status.in_([
+                    PipelineStatus.RUNNING,
+                    PipelineStatus.PAUSED,
+                    PipelineStatus.PENDING,
+                ])
             )
             .order_by(PipelineRun.started_at.desc())
             .limit(1)

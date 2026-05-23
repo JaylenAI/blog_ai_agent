@@ -2,12 +2,14 @@ import { useCallback, useState } from "react";
 import { api } from "../../api/client";
 import { useAppStore } from "../../stores/app-store";
 import type { SidebarPanel } from "../../stores/app-store";
+import { useUIStore } from "../../stores/ui-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
+import { useNotificationStore } from "../../stores/notification-store";
 import { ConfirmModal } from "../common/ConfirmModal";
 import { Icons } from "../common/Icons";
 import type { Article } from "../../types/article";
 
-export function Sidebar() {
+export function Sidebar({ className = "" }: { className?: string }) {
   const { articles, activeArticle, setActiveArticle, setSidebarPanel, setArticles, addToast } = useAppStore();
   const events = usePipelineStore((s) => s.events);
   const [openDrafts, setOpenDrafts] = useState(true);
@@ -15,6 +17,10 @@ export function Sidebar() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Article | null>(null);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const markAllRead = useNotificationStore((s) => s.markAllRead);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   const openPanel = (panel: NonNullable<SidebarPanel>) => setSidebarPanel(panel);
 
@@ -60,7 +66,7 @@ export function Sidebar() {
     );
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${className}`.trim()}>
       <div className="sidebar-brand">
         <div className="brand-mark">B</div>
         <div className="brand-name">Blog Agent</div>
@@ -82,7 +88,39 @@ export function Sidebar() {
               autoFocus
             />
           )}
-          <SbRow icon={<Icons.Inbox />} label="알림" />
+          <div onClick={() => { setShowNotifs((v) => !v); if (!showNotifs) markAllRead(); }}>
+            <SbRow icon={<Icons.Inbox />} label="알림" count={unreadCount() > 0 ? unreadCount() : undefined} />
+          </div>
+          {showNotifs && (
+            <div className="sb-notif-panel">
+              {notifications.length === 0 ? (
+                <div className="sb-notif-empty">알림이 없습니다</div>
+              ) : (
+                notifications.slice(0, 10).map((n) => (
+                  <div
+                    key={n.id}
+                    className={`sb-notif-item ${n.read ? "" : "unread"} ${n.articleId || n.runId ? "clickable" : ""}`}
+                    onClick={() => {
+                      if (n.articleId) {
+                        const target = articles.find((a) => a.id === n.articleId);
+                        if (target) {
+                          setActiveArticle(target);
+                          setShowNotifs(false);
+                        }
+                      } else if (n.runId) {
+                        setSidebarPanel("pipelines");
+                        setShowNotifs(false);
+                      }
+                    }}
+                  >
+                    <div className="sb-notif-title">{n.title}</div>
+                    <div className="sb-notif-msg">{n.message}</div>
+                    <div className="sb-notif-time">{new Date(n.timestamp).toLocaleTimeString("ko-KR")}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
           <div onClick={() => setActiveArticle(null)}>
             <SbRow icon={<Icons.Plus />} label="새 글 만들기" />
           </div>
@@ -139,6 +177,11 @@ export function Sidebar() {
             icon={<Icons.Tag />}
             label="References"
             count={referenceCount > 0 ? referenceCount : undefined}
+            onClick={() => {
+              const store = useUIStore.getState();
+              if (!store.rightPanelOpen) store.toggleRightPanel();
+              store.setRightPanelTab("references");
+            }}
           />
         </div>
 
@@ -211,6 +254,16 @@ function SbRow({
     <div
       className={`sb-row indent-${indent} ${active ? "active" : ""}`}
       onClick={onClick}
+      {...(onClick ? {
+        tabIndex: 0,
+        role: "button" as const,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        },
+      } : {})}
     >
       {chev !== undefined && (
         <Icons.Chevron
@@ -253,6 +306,7 @@ function ArticleRow({
       <button
         className="article-delete-btn"
         title="삭제"
+        aria-label="삭제"
         onClick={(e) => {
           e.stopPropagation();
           onDelete();

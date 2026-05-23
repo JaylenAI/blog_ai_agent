@@ -3,7 +3,7 @@ import type { Article } from "../../types/article";
 import { api } from "../../api/client";
 import { useAppStore } from "../../stores/app-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
-import { MarkdownRenderer } from "./MarkdownRenderer";
+import { LazyMarkdownRenderer as MarkdownRenderer } from "./LazyMarkdownRenderer";
 import { Icons } from "../common/Icons";
 
 interface EditorProps {
@@ -141,19 +141,20 @@ export function Editor({ article }: EditorProps) {
         <span>편당 비용 $0</span>
 
         {hasContent && !isEditing && (
-          <button className="editor-edit-btn" onClick={handleEdit}>
+          <button className="editor-edit-btn" onClick={handleEdit} aria-label="편집">
             <Icons.Doc s={12} /> 편집
           </button>
         )}
         {isEditing && (
           <div className="editor-edit-actions">
-            <button className="editor-cancel-btn" onClick={handleCancel}>
+            <button className="editor-cancel-btn" onClick={handleCancel} aria-label="편집 취소">
               취소
             </button>
             <button
               className="editor-save-btn"
               onClick={handleSave}
               disabled={saving}
+              aria-label="저장"
             >
               <Icons.Check s={12} w={2} />
               {saving ? "저장 중..." : "저장"}
@@ -196,18 +197,6 @@ export function Editor({ article }: EditorProps) {
             <div className="v">
               {article.section_count ?? outline.length ?? 0}
               <span className="unit"> / 7~9</span>
-            </div>
-          </div>
-          <div className="meta-cell">
-            <div className="k">키워드 밀도</div>
-            <div className="v">
-              —<span className="unit">%</span>
-            </div>
-          </div>
-          <div className="meta-cell">
-            <div className="k">예상 소요</div>
-            <div className="v">
-              —<span className="unit"> 분</span>
             </div>
           </div>
         </div>

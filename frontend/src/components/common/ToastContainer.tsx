@@ -11,10 +11,10 @@ export function ToastContainer() {
   useEffect(() => {
     if (toasts.length === 0) return;
 
-    const latest = toasts[toasts.length - 1] as typeof toasts[number] | undefined;
-    if (!latest) return;
-    const timer = setTimeout(() => removeToast(latest.id), AUTO_DISMISS_MS);
-    return () => clearTimeout(timer);
+    const timers = toasts.map((toast) =>
+      setTimeout(() => removeToast(toast.id), AUTO_DISMISS_MS),
+    );
+    return () => timers.forEach(clearTimeout);
   }, [toasts, removeToast]);
 
   if (toasts.length === 0) return null;

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { usePipelineActions } from "../../hooks/use-pipeline-actions";
-import { MarkdownRenderer } from "../editor/MarkdownRenderer";
+import { LazyMarkdownRenderer as MarkdownRenderer } from "../editor/LazyMarkdownRenderer";
 import { api } from "../../api/client";
 
 interface ContentPreviewProps {

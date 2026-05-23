@@ -66,7 +66,7 @@ class GeneratorStage(Stage):
                     format_spec=format_spec,
                 )
             )
-        except RuntimeError as e:
+        except (RuntimeError, TimeoutError) as e:
             logger.error("Generator Claude 응답 실패: %s", e)
             return StageOutput(
                 stage_name=self.name,

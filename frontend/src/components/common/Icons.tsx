@@ -178,6 +178,18 @@ export const Icons = {
       }
     />
   ),
+  Menu: (p: IconProps) => (
+    <Ic
+      {...p}
+      d={
+        <>
+          <line x1="2" y1="4" x2="14" y2="4" />
+          <line x1="2" y1="8" x2="14" y2="8" />
+          <line x1="2" y1="12" x2="14" y2="12" />
+        </>
+      }
+    />
+  ),
   Sidebar: (p: IconProps) => (
     <Ic
       {...p}

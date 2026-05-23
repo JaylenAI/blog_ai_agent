@@ -30,10 +30,16 @@ export function ConfirmModal({
 
   return (
     <div className="confirm-overlay" onClick={onCancel}>
-      <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="confirm-header">
-          <span className="confirm-title">{title}</span>
-          <button className="pk-close" onClick={onCancel}>
+          <span className="confirm-title" id="confirm-modal-title">{title}</span>
+          <button className="pk-close" onClick={onCancel} aria-label="닫기">
             <Icons.X s={14} />
           </button>
         </div>

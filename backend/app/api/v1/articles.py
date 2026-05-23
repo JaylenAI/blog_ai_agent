@@ -2,7 +2,6 @@ import mimetypes
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse, Response
-from pydantic import BaseModel
 
 from app.dependencies import get_article_service, get_file_manager
 from app.schemas.article import (
@@ -12,13 +11,14 @@ from app.schemas.article import (
     ArticleUpdate,
 )
 from app.schemas.common import ApiResponse
+from app.schemas.publish import PublishKit, PublishKitDiagram, PublishKitImage
 from app.services.article_service import ArticleService
 from app.utils.file_manager import FileManager
 
 router = APIRouter()
 
 
-@router.post("")
+@router.post("", status_code=201)
 async def create_article(
     data: ArticleCreate,
     service: ArticleService = Depends(get_article_service),
@@ -129,27 +129,6 @@ async def get_article_html(
     return ApiResponse(success=True, data=html)
 
 
-class PublishKitImage(BaseModel):
-    name: str
-    url: str
-
-
-class PublishKitDiagram(BaseModel):
-    name: str
-    content: str
-
-
-class PublishKit(BaseModel):
-    title: str
-    category: str
-    tags: list[str]
-    markdown: str | None
-    html: str | None
-    images: list[PublishKitImage]
-    diagrams: list[PublishKitDiagram]
-    word_count: int
-    status: str
-
 
 @router.get("/{article_id}/publish-kit")
 async def get_publish_kit(
@@ -189,7 +168,9 @@ async def get_publish_kit(
         success=True,
         data=PublishKit(
             title=article.title or article.topic,
-            category=article.category or (meta.get("category", "") if isinstance(meta, dict) else ""),
+            category=article.category or (
+                meta.get("category", "") if isinstance(meta, dict) else ""
+            ),
             tags=tags,
             markdown=markdown,
             html=html,

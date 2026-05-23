@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Icons } from "../common/Icons";
 import { api } from "../../api/client";
+import { useAppStore } from "../../stores/app-store";
 import type { BlogFormat, FormatSuggestion } from "../../types/format";
 
 interface LauncherProps {
-  onStart: (topic: string, autoGateOne: boolean, formatId: string) => void;
+  onStart: (topic: string, autoGateOne: boolean, formatId: string, length: "standard" | "long") => void;
   disabled: boolean;
 }
 
@@ -43,12 +44,19 @@ export function Launcher({ onStart, disabled }: LauncherProps) {
   const [selectedFormat, setSelectedFormat] = useState<string>("auto");
   const [suggestion, setSuggestion] = useState<FormatSuggestion | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const addToast = useAppStore((s) => s.addToast);
 
   useEffect(() => {
-    api.formats.list().then((res) => {
-      if (res.data) setFormats(res.data);
-    });
-  }, []);
+    api.formats
+      .list()
+      .then((res) => {
+        if (res.data) setFormats(res.data);
+      })
+      .catch(() => {
+        setFormats([]);
+        addToast({ type: "error", message: "포맷 목록을 불러올 수 없습니다" });
+      });
+  }, [addToast]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -58,13 +66,18 @@ export function Launcher({ onStart, disabled }: LauncherProps) {
       return;
     }
     debounceRef.current = setTimeout(() => {
-      api.formats.suggest(trimmed).then((res) => {
-        if (res.data && res.data.length > 0) {
-          setSuggestion(res.data[0] ?? null);
-        } else {
+      api.formats
+        .suggest(trimmed)
+        .then((res) => {
+          if (res.data && res.data.length > 0) {
+            setSuggestion(res.data[0] ?? null);
+          } else {
+            setSuggestion(null);
+          }
+        })
+        .catch(() => {
           setSuggestion(null);
-        }
-      });
+        });
     }, 500);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -80,9 +93,9 @@ export function Launcher({ onStart, disabled }: LauncherProps) {
     (t?: string, fmt?: string) => {
       const text = (t ?? topic).trim();
       if (!text || disabled) return;
-      onStart(text, autoGate, fmt ?? resolvedFormat);
+      onStart(text, autoGate, fmt ?? resolvedFormat, length);
     },
-    [topic, autoGate, disabled, onStart, resolvedFormat],
+    [topic, autoGate, disabled, onStart, resolvedFormat, length],
   );
 
   const handleKeyDown = useCallback(
@@ -168,7 +181,7 @@ export function Launcher({ onStart, disabled }: LauncherProps) {
           >
             장문
           </button>
-          <button className="opt" title="자료 직접 첨부">
+          <button className="opt" disabled title="개발 예정">
             <Icons.Plus s={11} /> 참고 자료
           </button>
           <button

@@ -54,9 +54,7 @@ class ArticleService:
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(article, field, value)
 
-        await self._repo._session.flush()
-        await self._repo._session.refresh(article)
-        return article
+        return await self._repo.update(article)
 
     async def delete(self, article_id: int) -> bool:
         article = await self._repo.find_by_id(article_id)

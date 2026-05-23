@@ -43,6 +43,7 @@ export interface PipelineRun {
   article_id: number;
   current_stage: string;
   status: string;
+  error_message?: string;
   started_at: string;
   completed_at: string | null;
 }

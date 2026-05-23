@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { useAppStore } from "../../stores/app-store";
 import { Icons } from "../common/Icons";
-import { MarkdownRenderer } from "../editor/MarkdownRenderer";
+import { LazyMarkdownRenderer as MarkdownRenderer } from "../editor/LazyMarkdownRenderer";
 
 type Tab = "markdown" | "html" | "meta" | "images";
 
@@ -60,18 +60,24 @@ export function PublishKitModal({ articleId, onClose }: Props) {
 
   return (
     <div className="pk-overlay" onClick={onClose}>
-      <div className="pk-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="pk-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pk-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="pk-header">
           <div className="pk-header-left">
             <Icons.Send s={16} />
-            <span className="pk-header-title">발행 준비</span>
+            <span className="pk-header-title" id="pk-modal-title">발행 준비</span>
             {kit && (
               <span className="pk-header-sub">
                 {kit.title} · {kit.word_count.toLocaleString()}자
               </span>
             )}
           </div>
-          <button className="pk-close" onClick={onClose}>
+          <button className="pk-close" onClick={onClose} aria-label="닫기">
             <Icons.X s={16} />
           </button>
         </div>
@@ -206,12 +212,28 @@ function HtmlTab({
   const [view, setView] = useState<"preview" | "source">("source");
   const renderRef = useRef<HTMLDivElement>(null);
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
-
-  const htmlContent = kit.html ?? generatedHtml;
-  const isGenerated = !kit.html && !!generatedHtml;
+  const [backendHtml, setBackendHtml] = useState<string | null>(null);
+  const [backendChecked, setBackendChecked] = useState(false);
 
   useEffect(() => {
-    if (!kit.html && kit.markdown && renderRef.current) {
+    if (kit.html) {
+      setBackendChecked(true);
+      return;
+    }
+    api.articles
+      .getHtml(articleId)
+      .then((html) => {
+        if (html) setBackendHtml(html);
+      })
+      .catch(() => { /* backend HTML unavailable — use fallback */ })
+      .finally(() => setBackendChecked(true));
+  }, [articleId, kit.html]);
+
+  const htmlContent = kit.html ?? backendHtml ?? generatedHtml;
+  const isGenerated = !kit.html && !backendHtml && !!generatedHtml;
+
+  useEffect(() => {
+    if (!kit.html && !backendHtml && backendChecked && kit.markdown && renderRef.current) {
       const timer = setTimeout(() => {
         if (renderRef.current) {
           setGeneratedHtml(renderRef.current.innerHTML);
@@ -219,9 +241,9 @@ function HtmlTab({
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [kit.html, kit.markdown]);
+  }, [kit.html, kit.markdown, backendHtml, backendChecked]);
 
-  if (!kit.html && !kit.markdown) {
+  if (!kit.html && !kit.markdown && !backendHtml && backendChecked) {
     return (
       <EmptyState
         icon={<Icons.Hash s={28} w={1} />}
@@ -233,7 +255,7 @@ function HtmlTab({
 
   return (
     <div className="pk-content-tab">
-      {!kit.html && kit.markdown && (
+      {!kit.html && !backendHtml && kit.markdown && (
         <div ref={renderRef} style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <MarkdownRenderer content={kit.markdown} articleId={articleId} />
         </div>

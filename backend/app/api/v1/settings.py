@@ -81,8 +81,14 @@ async def get_general_settings() -> ApiResponse[GeneralSettings]:
         data=GeneralSettings(
             tistory_blog_url=general.get("tistory_blog_url", settings.tistory_blog_url),
             stage_timeout=general.get("stage_timeout", settings.stage_timeout),
-            image_generation_enabled=general.get("image_generation_enabled", settings.image_generation_enabled),
-            max_images_per_article=general.get("max_images_per_article", settings.max_images_per_article),
+            image_generation_enabled=general.get(
+                "image_generation_enabled",
+                settings.image_generation_enabled,
+            ),
+            max_images_per_article=general.get(
+                "max_images_per_article",
+                settings.max_images_per_article,
+            ),
             log_level=general.get("log_level", settings.log_level),
         ),
     )

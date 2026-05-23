@@ -56,7 +56,7 @@ recommended_format 필드에 "{format_spec.id}"를 그대로 반환하세요.
   "search_queries": ["자료 조사용 검색 쿼리 4-6개"],
   "seo_keywords": ["SEO 키워드 5-10개"],
   "estimated_sections": 7,
-  "recommended_format": "형식 ID (concept, tutorial, comparison, troubleshooting, architecture, review, trend)"
+  "recommended_format": "형식 ID (concept, tutorial, comparison, ...)"
 }}
 
 [REQUEST]

@@ -2,11 +2,11 @@ import asyncio
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from app.claude.client import ClaudeClient
 from app.db.session import async_session_factory
-from app.dependencies import get_pipeline_service
+from app.dependencies import create_pipeline_service, get_pipeline_service
 from app.schemas.common import ApiResponse
 from app.schemas.pipeline import (
     PipelineRunResponse,
@@ -15,7 +15,6 @@ from app.schemas.pipeline import (
     ValidationSummary,
 )
 from app.services.pipeline_service import PipelineService
-from app.utils.file_manager import FileManager
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -87,10 +86,7 @@ async def reject_gate(
     run_id: int,
     service: PipelineService = Depends(get_pipeline_service),
 ) -> ApiResponse[dict]:
-    try:
-        await service.reject_pipeline(run_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+    await service.reject_pipeline(run_id)
     return ApiResponse(success=True, data={"status": "cancelled"})
 
 
@@ -99,10 +95,7 @@ async def cancel_run(
     run_id: int,
     service: PipelineService = Depends(get_pipeline_service),
 ) -> ApiResponse[dict]:
-    try:
-        await service.cancel_run(run_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+    await service.cancel_run(run_id)
     return ApiResponse(success=True, data={"status": "cancelled"})
 
 
@@ -169,7 +162,7 @@ async def retry_pipeline_stream(
     async def _retry_bg(q: asyncio.Queue, rid: int) -> None:
         async with async_session_factory() as session:
             try:
-                svc = PipelineService(session, ClaudeClient(), FileManager())
+                svc = create_pipeline_service(session)
                 async for event in svc.retry_pipeline(rid):
                     await q.put(_event_to_dict(event))
                 await session.commit()
@@ -227,9 +220,7 @@ async def _run_pipeline_in_background(
 ) -> None:
     async with async_session_factory() as session:
         try:
-            service = PipelineService(
-                session, ClaudeClient(), FileManager()
-            )
+            service = create_pipeline_service(session)
             async for event in service.start_pipeline(
                 article_id,
                 auto_gate_one=auto_gate_one,
@@ -256,9 +247,7 @@ async def _resume_pipeline_in_background(
 ) -> None:
     async with async_session_factory() as session:
         try:
-            service = PipelineService(
-                session, ClaudeClient(), FileManager()
-            )
+            service = create_pipeline_service(session)
             async for event in service.resume_pipeline(run_id):
                 await queue.put(_event_to_dict(event))
             await session.commit()
@@ -312,19 +301,21 @@ async def start_pipeline_stream(
     return _sse_from_queue(queue)
 
 
+class ValidateOnlyRequest(BaseModel):
+    article_id: int
+
+
 @router.post("/validate-only/stream")
 async def validate_only_stream(
-    data: dict,
+    data: ValidateOnlyRequest,
 ) -> EventSourceResponse:
-    article_id = data.get("article_id")
-    if not article_id:
-        raise HTTPException(status_code=400, detail="article_id is required")
+    article_id = data.article_id
     queue: asyncio.Queue = asyncio.Queue()
 
     async def _validate_bg(q: asyncio.Queue, aid: int) -> None:
         async with async_session_factory() as session:
             try:
-                svc = PipelineService(session, ClaudeClient(), FileManager())
+                svc = create_pipeline_service(session)
                 async for event in svc.validate_only(aid):
                     await q.put(_event_to_dict(event))
                 await session.commit()

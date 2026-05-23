@@ -18,7 +18,13 @@ const STAGE_LABELS: Record<
   published: { txt: "Tistory 발행 완료", cls: "done" },
 };
 
-export function Topbar() {
+export function Topbar({
+  hamburger = false,
+  onHamburgerClick,
+}: {
+  hamburger?: boolean;
+  onHamburgerClick?: () => void;
+} = {}) {
   const {
     toggleSidebar,
     toggleRightPanel,
@@ -121,13 +127,20 @@ export function Topbar() {
     }
   }, [activeArticle, addToast]);
 
-  const hasContent = !!useAppStore.getState().articleContent;
+  const articleContent = useAppStore((s) => s.articleContent);
+  const hasContent = !!articleContent;
 
   return (
     <header className="topbar">
-      <button className="icon-btn" title="사이드바" onClick={toggleSidebar}>
-        <Icons.Sidebar />
-      </button>
+      {hamburger ? (
+        <button className="icon-btn hamburger-btn" title="메뉴" aria-label="메뉴 열기" onClick={onHamburgerClick}>
+          <Icons.Menu />
+        </button>
+      ) : (
+        <button className="icon-btn" title="사이드바" aria-label="사이드바 토글" onClick={toggleSidebar}>
+          <Icons.Sidebar />
+        </button>
+      )}
       <div className="crumbs">
         <span className="crumb">AI의 정석</span>
         <span className="sep">/</span>
@@ -194,15 +207,13 @@ export function Topbar() {
         <button
           className="icon-btn ghost"
           title={theme === "light" ? "다크 모드" : "라이트 모드"}
+          aria-label="테마 전환"
           onClick={() => setTheme(theme === "light" ? "dark" : "light")}
         >
           {theme === "light" ? <Icons.Moon s={14} /> : <Icons.Sun s={14} />}
         </button>
-        <button className="icon-btn primary" onClick={toggleRightPanel}>
+        <button className="icon-btn primary" aria-label="파이프라인 패널" onClick={toggleRightPanel}>
           파이프라인
-        </button>
-        <button className="icon-btn" title="더보기">
-          <Icons.More />
         </button>
       </div>
     </header>

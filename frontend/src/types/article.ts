@@ -23,7 +23,7 @@ export type ArticleStatus =
   | "generating"
   | "validating"
   | "review"
-  | "publishing"
+  | "gate_one"
   | "published"
   | "failed";
 

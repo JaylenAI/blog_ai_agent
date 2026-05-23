@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.repositories.article_repo import ArticleRepository
 from app.db.repositories.pipeline_repo import PipelineRepository
 from app.db.repositories.validation_repo import ValidationRepository
+from app.exceptions import InvalidStateError, NotFoundError
 from app.models.article import Article
 from app.models.pipeline_run import PipelineRun, PipelineStage, PipelineStatus
 from app.models.validation import ValidationCategory
@@ -14,7 +15,6 @@ from app.services.pipeline_service import PipelineService
 
 from .conftest import (
     MOCK_CRITIQUE,
-    MOCK_IMAGE_PLAN,
     MockClaudeResponse,
     build_mock_claude,
     build_mock_file_manager,
@@ -267,7 +267,7 @@ async def test_reject_pipeline_not_found(db_session: AsyncSession) -> None:
     mock_fm = build_mock_file_manager()
 
     service = PipelineService(db_session, mock_claude, mock_fm)
-    with pytest.raises(ValueError, match="찾을 수 없습니다"):
+    with pytest.raises(NotFoundError, match="찾을 수 없습니다"):
         await service.reject_pipeline(9999)
 
 
@@ -283,7 +283,7 @@ async def test_reject_pipeline_not_paused(db_session: AsyncSession) -> None:
     mock_fm = build_mock_file_manager()
 
     service = PipelineService(db_session, mock_claude, mock_fm)
-    with pytest.raises(ValueError, match="대기 상태가 아닙니다"):
+    with pytest.raises(InvalidStateError, match="대기 상태가 아닙니다"):
         await service.reject_pipeline(run.id)
 
 
@@ -427,3 +427,317 @@ async def test_save_validations_skips_invalid_category(db_session: AsyncSession)
     validations = await val_repo.find_by_pipeline_run(run.id)
     assert len(validations) == 1
     assert validations[0].category == ValidationCategory.STYLE
+
+
+# ── cancel_run ──
+
+
+async def test_cancel_run_from_running(db_session: AsyncSession) -> None:
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    run = await pipe_repo.create(PipelineRun(
+        article_id=article.id,
+        status=PipelineStatus.RUNNING,
+    ))
+
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    await service.cancel_run(run.id)
+
+    refreshed = await pipe_repo.find_by_id(run.id)
+    assert refreshed is not None
+    assert refreshed.status == PipelineStatus.CANCELLED
+
+
+async def test_cancel_run_from_paused(db_session: AsyncSession) -> None:
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    run = await pipe_repo.create(PipelineRun(
+        article_id=article.id,
+        status=PipelineStatus.PAUSED,
+    ))
+
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    await service.cancel_run(run.id)
+
+    refreshed = await pipe_repo.find_by_id(run.id)
+    assert refreshed is not None
+    assert refreshed.status == PipelineStatus.CANCELLED
+
+
+async def test_cancel_run_not_found(db_session: AsyncSession) -> None:
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    with pytest.raises(NotFoundError, match="찾을 수 없습니다"):
+        await service.cancel_run(9999)
+
+
+async def test_cancel_run_invalid_state_completed(db_session: AsyncSession) -> None:
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    run = await pipe_repo.create(PipelineRun(
+        article_id=article.id,
+        status=PipelineStatus.COMPLETED,
+    ))
+
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    with pytest.raises(InvalidStateError, match="취소 가능한 상태가 아닙니다"):
+        await service.cancel_run(run.id)
+
+
+async def test_cancel_run_invalid_state_failed(db_session: AsyncSession) -> None:
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    run = await pipe_repo.create(PipelineRun(
+        article_id=article.id,
+        status=PipelineStatus.FAILED,
+    ))
+
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    with pytest.raises(InvalidStateError, match="취소 가능한 상태가 아닙니다"):
+        await service.cancel_run(run.id)
+
+
+async def test_cancel_run_invalid_state_cancelled(db_session: AsyncSession) -> None:
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    run = await pipe_repo.create(PipelineRun(
+        article_id=article.id,
+        status=PipelineStatus.CANCELLED,
+    ))
+
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    with pytest.raises(InvalidStateError, match="취소 가능한 상태가 아닙니다"):
+        await service.cancel_run(run.id)
+
+
+# ── get_all_runs / get_runs_for_article / get_active_run ──
+
+
+async def test_get_all_runs(db_session: AsyncSession) -> None:
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    await pipe_repo.create(PipelineRun(article_id=article.id))
+    await pipe_repo.create(PipelineRun(article_id=article.id))
+    await pipe_repo.create(PipelineRun(article_id=article.id))
+
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    runs = await service.get_all_runs(limit=2, offset=0)
+    assert len(runs) == 2
+
+    all_runs = await service.get_all_runs()
+    assert len(all_runs) == 3
+
+
+async def test_get_runs_for_article(db_session: AsyncSession) -> None:
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    await pipe_repo.create(PipelineRun(article_id=article.id))
+    await pipe_repo.create(PipelineRun(article_id=article.id))
+
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    runs = await service.get_runs_for_article(article.id)
+    assert len(runs) == 2
+
+
+async def test_get_runs_for_article_empty(db_session: AsyncSession) -> None:
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    runs = await service.get_runs_for_article(9999)
+    assert runs == []
+
+
+async def test_get_active_run_returns_none(db_session: AsyncSession) -> None:
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    active = await service.get_active_run()
+    assert active is None
+
+
+# ── retry_pipeline ──
+
+
+async def _collect_retry_events(
+    service: PipelineService, run_id: int
+) -> list[PipelineEvent]:
+    events = []
+    async for event in service.retry_pipeline(run_id):
+        events.append(event)
+    return events
+
+
+async def test_retry_pipeline_not_found(db_session: AsyncSession) -> None:
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    events = await _collect_retry_events(service, 9999)
+
+    assert len(events) == 1
+    assert events[0].event_type == "pipeline_error"
+    assert events[0].stage == "retry"
+    assert "찾을 수 없습니다" in events[0].message
+
+
+async def test_retry_pipeline_not_failed(db_session: AsyncSession) -> None:
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    run = await pipe_repo.create(PipelineRun(
+        article_id=article.id,
+        status=PipelineStatus.COMPLETED,
+    ))
+
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    events = await _collect_retry_events(service, run.id)
+
+    assert len(events) == 1
+    assert events[0].event_type == "pipeline_error"
+    assert "실패 상태의 파이프라인만" in events[0].message
+
+
+async def test_retry_pipeline_article_deleted(db_session: AsyncSession) -> None:
+    """retry 시 article이 삭제된 경우"""
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    run = await pipe_repo.create(PipelineRun(
+        article_id=article.id,
+        status=PipelineStatus.FAILED,
+    ))
+
+    # article 삭제 시뮬레이션: article_repo mock
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+    service = PipelineService(db_session, mock_claude, mock_fm)
+
+    from unittest.mock import AsyncMock
+    service._article_repo.find_by_id = AsyncMock(return_value=None)
+
+    events = await _collect_retry_events(service, run.id)
+
+    assert len(events) == 1
+    assert events[0].event_type == "pipeline_error"
+    assert "아티클을 찾을 수 없습니다" in events[0].message
+
+
+async def test_retry_pipeline_success(db_session: AsyncSession) -> None:
+    """FAILED 상태 run을 retry하면 새 run이 생성되고 파이프라인 시작"""
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    failed_run = await pipe_repo.create(PipelineRun(
+        article_id=article.id,
+        status=PipelineStatus.FAILED,
+    ))
+
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    events = await _collect_retry_events(service, failed_run.id)
+
+    event_types = [e.event_type for e in events]
+    assert "stage_start" in event_types
+
+    all_runs = await pipe_repo.find_by_article_id(article.id)
+    assert len(all_runs) == 2
+    run_ids = {r.id for r in all_runs}
+    assert failed_run.id in run_ids
+
+
+# ── validate_only ──
+
+
+async def _collect_validate_only_events(
+    service: PipelineService, article_id: int
+) -> list[PipelineEvent]:
+    events = []
+    async for event in service.validate_only(article_id):
+        events.append(event)
+    return events
+
+
+async def test_validate_only_article_not_found(db_session: AsyncSession) -> None:
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    events = await _collect_validate_only_events(service, 9999)
+
+    assert len(events) == 1
+    assert events[0].event_type == "pipeline_error"
+    assert events[0].stage == "validate"
+    assert "아티클을 찾을 수 없습니다" in events[0].message
+
+
+async def test_validate_only_success(db_session: AsyncSession) -> None:
+    """validate_only는 ValidatorStage만 실행"""
+    article = await _create_test_article(db_session)
+
+    mock_claude = build_mock_claude()
+    mock_claude.run_json.side_effect = [MOCK_CRITIQUE]
+    mock_fm = build_mock_file_manager(with_content=True)
+
+    service = PipelineService(db_session, mock_claude, mock_fm)
+    events = await _collect_validate_only_events(service, article.id)
+
+    event_types = [e.event_type for e in events]
+    assert "stage_start" in event_types
+
+    pipe_repo = PipelineRepository(db_session)
+    runs = await pipe_repo.find_by_article_id(article.id)
+    assert len(runs) == 1
+
+
+# ── resume_pipeline: article 삭제된 경우 ──
+
+
+async def test_resume_pipeline_article_deleted(db_session: AsyncSession) -> None:
+    """resume 시 article이 삭제된 경우"""
+    article = await _create_test_article(db_session)
+    pipe_repo = PipelineRepository(db_session)
+    run = await pipe_repo.create(PipelineRun(
+        article_id=article.id,
+        current_stage=PipelineStage.GATE_ONE,
+        status=PipelineStatus.PAUSED,
+    ))
+
+    mock_claude = build_mock_claude()
+    mock_fm = build_mock_file_manager()
+    service = PipelineService(db_session, mock_claude, mock_fm)
+
+    from unittest.mock import AsyncMock
+    service._article_repo.find_by_id = AsyncMock(return_value=None)
+
+    events = await _collect_resume_events(service, run.id)
+
+    assert len(events) == 1
+    assert events[0].event_type == "pipeline_error"
+    assert "아티클을 찾을 수 없습니다" in events[0].message

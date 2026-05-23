@@ -12,7 +12,8 @@ def _make_service(
 ) -> ObsidianService:
     fm = MagicMock()
     fm.read_text.return_value = content
-    fm.read_json.return_value = meta or {"title": "Test", "category": "AI", "seo_keywords": ["test"]}
+    default_meta = {"title": "Test", "category": "AI", "seo_keywords": ["test"]}
+    fm.read_json.return_value = meta or default_meta
     return ObsidianService(fm, vault_path)
 
 
@@ -50,7 +51,8 @@ def test_save_article_no_content() -> None:
 
 
 def test_format_obsidian_note_basic() -> None:
-    result = format_obsidian_note("# Body", {"title": "T", "category": "AI", "seo_keywords": ["k1"]})
+    meta = {"title": "T", "category": "AI", "seo_keywords": ["k1"]}
+    result = format_obsidian_note("# Body", meta)
     assert "---" in result
     assert "blog/published" in result
     assert "category/ai" in result

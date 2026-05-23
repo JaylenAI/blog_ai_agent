@@ -34,14 +34,41 @@ class PublisherStage(Stage):
         meta = self._fm.read_json(stage_input.slug, "meta.json") or {}
 
         slug_dir = self._fm.article_dir(stage_input.slug)
-        diagram_results = await render_all_diagrams(slug_dir)
-        rendered_count = sum(1 for d in diagram_results if d["success"])
 
-        html_content = convert_for_tistory(content, meta)
-        self._fm.write_text(stage_input.slug, "tistory.html", html_content)
+        rendered_count = 0
+        try:
+            diagram_results = await render_all_diagrams(slug_dir)
+            rendered_count = sum(1 for d in diagram_results if d["success"])
+        except Exception as e:
+            logger.error("다이어그램 렌더링 실패: %s", e)
+            return StageOutput(
+                stage_name=self.name,
+                success=False,
+                error=f"다이어그램 렌더링 실패: {e}",
+            )
 
-        result = self._obsidian.save_article(stage_input.slug)
-        obsidian_saved = result.get("success", False)
+        try:
+            html_content = convert_for_tistory(content, meta)
+            self._fm.write_text(stage_input.slug, "tistory.html", html_content)
+        except Exception as e:
+            logger.error("Tistory HTML 변환 실패: %s", e)
+            return StageOutput(
+                stage_name=self.name,
+                success=False,
+                error=f"Tistory HTML 변환 실패: {e}",
+            )
+
+        obsidian_saved = False
+        try:
+            result = self._obsidian.save_article(stage_input.slug)
+            obsidian_saved = result.get("success", False)
+        except Exception as e:
+            logger.error("Obsidian 저장 실패: %s", e)
+            return StageOutput(
+                stage_name=self.name,
+                success=False,
+                error=f"Obsidian 저장 실패: {e}",
+            )
 
         logger.info(
             "Publisher 완료: obsidian=%s, diagrams=%d, html=생성됨",

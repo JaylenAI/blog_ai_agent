@@ -5,23 +5,39 @@ import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import mermaid from "mermaid";
 import type { Components } from "react-markdown";
+import { useUIStore } from "../../stores/ui-store";
 import "../../styles/markdown.css";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
-mermaid.initialize({
-  startOnLoad: false,
-  theme: "dark",
-  themeVariables: {
-    primaryColor: "#3b82f6",
-    primaryTextColor: "#e2e8f0",
-    primaryBorderColor: "#475569",
-    lineColor: "#64748b",
-    secondaryColor: "#1e293b",
-    tertiaryColor: "#0f172a",
-    fontFamily: "'Pretendard', sans-serif",
-  },
-});
+function initMermaidTheme(theme: "light" | "dark") {
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: theme === "dark" ? "dark" : "default",
+    themeVariables:
+      theme === "dark"
+        ? {
+            primaryColor: "#3b82f6",
+            primaryTextColor: "#e2e8f0",
+            primaryBorderColor: "#475569",
+            lineColor: "#64748b",
+            secondaryColor: "#1e293b",
+            tertiaryColor: "#0f172a",
+            fontFamily: "'Pretendard', sans-serif",
+          }
+        : {
+            primaryColor: "#3b82f6",
+            primaryTextColor: "#1e293b",
+            primaryBorderColor: "#cbd5e1",
+            lineColor: "#94a3b8",
+            secondaryColor: "#f1f5f9",
+            tertiaryColor: "#e2e8f0",
+            fontFamily: "'Pretendard', sans-serif",
+          },
+  });
+}
+
+initMermaidTheme("dark");
 
 interface MarkdownRendererProps {
   content: string;
@@ -30,6 +46,11 @@ interface MarkdownRendererProps {
 
 function MermaidBlock({ code }: { code: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const theme = useUIStore((s) => s.theme);
+
+  useEffect(() => {
+    initMermaidTheme(theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -45,7 +66,7 @@ function MermaidBlock({ code }: { code: string }) {
           ref.current.style.whiteSpace = "pre";
         }
       });
-  }, [code]);
+  }, [code, theme]);
 
   return (
     <div

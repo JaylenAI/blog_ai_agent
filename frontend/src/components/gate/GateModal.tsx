@@ -16,8 +16,10 @@ export function GateModal({ gate, runId, onClose }: GateModalProps) {
   const { approveGate, rejectGate } = usePipelineActions();
   const isRunning = usePipelineStore((s) => s.isRunning);
   const closeGateModal = useAppStore((s) => s.closeGateModal);
+  const [checklistComplete, setChecklistComplete] = useState(false);
 
   const isGate1 = gate === "gate_one";
+  const approveDisabled = isRunning || (!isGate1 && !checklistComplete);
 
   const handleApprove = useCallback(async () => {
     await approveGate(runId);
@@ -37,26 +39,38 @@ export function GateModal({ gate, runId, onClose }: GateModalProps) {
 
   return (
     <div className="modal-scrim" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="gate-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-head">
           <span className="gate-badge">{isGate1 ? "GATE 1" : "GATE 2"}</span>
-          <div className="modal-title">
+          <div className="modal-title" id="gate-modal-title">
             {isGate1 ? "아웃라인 검수" : "최종 검수 — Tistory 게시 전"}
           </div>
-          <button className="icon-btn" onClick={onClose}>
+          <button className="icon-btn" onClick={onClose} aria-label="닫기">
             <Icons.X />
           </button>
         </div>
 
         <div className="modal-body">
-          {isGate1 ? <Gate1Body /> : <Gate2Body runId={runId} />}
+          {isGate1 ? (
+            <Gate1Body />
+          ) : (
+            <Gate2Body runId={runId} onChecklistChange={setChecklistComplete} />
+          )}
         </div>
 
         <div className="modal-foot">
           <span className="filler">
             {isGate1
               ? "Gate 1은 --auto 플래그로 건너뛸 수 있지만 기본은 사람이 검수"
-              : "Gate 2는 절대 자동화 불가 — 사람만 결정"}
+              : checklistComplete
+                ? "Gate 2는 절대 자동화 불가 — 사람만 결정"
+                : "모든 체크리스트 항목을 확인해야 발행할 수 있습니다"}
           </span>
           <button
             className="btn ghost"
@@ -75,7 +89,7 @@ export function GateModal({ gate, runId, onClose }: GateModalProps) {
           <button
             className="btn primary"
             onClick={handleApprove}
-            disabled={isRunning}
+            disabled={approveDisabled}
           >
             <Icons.Check s={13} w={2.5} />
             {isRunning
@@ -124,7 +138,13 @@ function Gate1Body() {
   );
 }
 
-function Gate2Body({ runId }: { runId: number }) {
+function Gate2Body({
+  runId,
+  onChecklistChange,
+}: {
+  runId: number;
+  onChecklistChange: (allChecked: boolean) => void;
+}) {
   const validationSummary = usePipelineStore((s) => s.validationSummary);
 
   return (
@@ -175,7 +195,7 @@ function Gate2Body({ runId }: { runId: number }) {
 
       <HighlightSection />
       <ContentPreview runId={runId} />
-      <PrePublishChecklist />
+      <PrePublishChecklist onAllChecked={onChecklistChange} />
     </>
   );
 }
@@ -214,11 +234,16 @@ const CHECKLIST_ITEMS = [
   "내부 링크 2개 이상 삽입",
 ] as const;
 
-function PrePublishChecklist() {
+function PrePublishChecklist({ onAllChecked }: { onAllChecked: (allChecked: boolean) => void }) {
   const [checked, setChecked] = useState<Record<number, boolean>>({});
 
   const toggle = (index: number) => {
-    setChecked((prev) => ({ ...prev, [index]: !prev[index] }));
+    setChecked((prev) => {
+      const next = { ...prev, [index]: !prev[index] };
+      const count = Object.values(next).filter(Boolean).length;
+      onAllChecked(count === CHECKLIST_ITEMS.length);
+      return next;
+    });
   };
 
   const checkedCount = Object.values(checked).filter(Boolean).length;

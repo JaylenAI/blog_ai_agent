@@ -7,6 +7,7 @@ from app.config import settings
 from app.db.repositories.article_repo import ArticleRepository
 from app.db.repositories.pipeline_repo import PipelineRepository
 from app.db.repositories.validation_repo import ValidationRepository
+from app.exceptions import InvalidStateError, NotFoundError
 from app.models.pipeline_run import PipelineRun, PipelineStage, PipelineStatus
 from app.models.validation import Validation, ValidationCategory
 from app.pipeline.base import PipelineEvent, Stage
@@ -131,18 +132,18 @@ class PipelineService:
     async def reject_pipeline(self, run_id: int) -> None:
         run = await self._pipeline_repo.find_by_id(run_id)
         if not run:
-            raise ValueError("파이프라인 실행을 찾을 수 없습니다")
+            raise NotFoundError("파이프라인 실행을 찾을 수 없습니다")
         if run.status != PipelineStatus.PAUSED:
-            raise ValueError("파이프라인이 대기 상태가 아닙니다")
+            raise InvalidStateError("파이프라인이 대기 상태가 아닙니다")
         run.status = PipelineStatus.CANCELLED
         await self._session.commit()
 
     async def cancel_run(self, run_id: int) -> None:
         run = await self._pipeline_repo.find_by_id(run_id)
         if not run:
-            raise ValueError("파이프라인 실행을 찾을 수 없습니다")
+            raise NotFoundError("파이프라인 실행을 찾을 수 없습니다")
         if run.status not in (PipelineStatus.RUNNING, PipelineStatus.PAUSED):
-            raise ValueError("취소 가능한 상태가 아닙니다")
+            raise InvalidStateError("취소 가능한 상태가 아닙니다")
         run.status = PipelineStatus.CANCELLED
         await self._session.commit()
 

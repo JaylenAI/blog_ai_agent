@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.exceptions import DomainError
 from app.schemas.common import ApiResponse
 from app.utils.logger import get_logger
 
@@ -8,6 +9,18 @@ logger = get_logger(__name__)
 
 
 def register_error_handlers(app: FastAPI) -> None:
+    @app.exception_handler(DomainError)
+    async def domain_error_handler(
+        request: Request, exc: DomainError
+    ) -> JSONResponse:
+        logger.warning(
+            "%s: %s | path=%s", type(exc).__name__, exc, request.url.path
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=ApiResponse(success=False, error=str(exc)).model_dump(),
+        )
+
     @app.exception_handler(ValueError)
     async def value_error_handler(
         request: Request, exc: ValueError

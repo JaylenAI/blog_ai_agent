@@ -30,16 +30,16 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
       return (
-        <div className="flex flex-col items-center justify-center min-h-[200px] p-8 text-center">
-          <h2 className="text-lg font-semibold text-red-600 mb-2">
+        <div className="error-boundary">
+          <h2 className="error-boundary-title">
             오류가 발생했습니다
           </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            {this.state.error?.message || "알 수 없는 오류"}
+          <p className="error-boundary-msg">
+            페이지를 표시하는 중 문제가 발생했습니다. 다시 시도해 주세요.
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="error-boundary-btn"
           >
             다시 시도
           </button>

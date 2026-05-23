@@ -13,6 +13,8 @@ export function useArticles() {
       if (res.success && res.data) {
         setArticles(res.data.items as Article[]);
       }
+    } catch {
+      // 아티클 목록 로드 실패 — 다음 시도에서 복구
     } finally {
       setArticlesLoading(false);
     }
