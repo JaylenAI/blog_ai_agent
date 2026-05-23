@@ -4,7 +4,7 @@ tags:
   - phase/7
 date: 2026-05-21
 created: 2026-05-21
-updated: 2026-05-21
+updated: 2026-05-23
 aliases:
   - Project Setup
   - Phase 7
@@ -28,10 +28,10 @@ related:
 
 | 도구 | 최소 버전 | 용도 | 설치 확인 |
 |------|----------|------|----------|
-| **Python** | 3.11+ | 하네스 런타임, 스크립트 | `python3 --version` |
+| **Python** | 3.12+ | FastAPI 백엔드 런타임 | `python3 --version` |
 | **UV** | 0.7+ | Python 패키지 관리 (pip/venv/poetry 금지) | `uv --version` |
-| **Node.js** | 20 LTS+ | mermaid-cli 실행 | `node --version` |
-| **pnpm** | 9+ | Node 패키지 관리 | `pnpm --version` |
+| **Node.js** | 22+ | React 프론트엔드 + mermaid-cli | `node --version` |
+| **pnpm** | 10+ | Node 패키지 관리 | `pnpm --version` |
 | **Git** | 2.40+ | 버전 관리 | `git --version` |
 | **Claude Code** | 최신 | 하네스 런타임 (Claude Max 구독) | `claude --version` |
 
@@ -39,9 +39,9 @@ related:
 
 | 도구 | 시점 | 용도 |
 |------|------|------|
-| **Playwright** | Phase 9 (Stage 6) | Tistory 반자동 발행, 동적 페이지 크롤링 |
-| **Pillow** | Phase 9 (Stage 4) | 이미지 후처리 (리사이즈, 메타데이터) |
-| **matplotlib** | Phase 12+ (Could) | 차트 생성 |
+| **Playwright** | ✅ 설치됨 | E2E 테스트 + Tistory 반자동 발행 |
+| **Pillow** | ✅ 설치됨 | 이미지 후처리 (리사이즈, 메타데이터) |
+| **mermaid-cli** | ✅ 설치됨 | 다이어그램 PNG 렌더링 |
 
 ---
 
@@ -107,11 +107,11 @@ pnpm exec mmdc --version
 name = "blog-ai-agent"
 version = "0.1.0"
 description = "한국어 기술 블로그 E2E 자동화 AI Agent"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = "MIT"
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
@@ -477,8 +477,8 @@ pnpm exec mmdc --version         # @mermaid-js/mermaid-cli 설치 확인
 # 3. 린트
 uv run ruff check backend/app/   # 에러 0
 
-# 4. 테스트 (초기엔 테스트가 없으므로 skip 가능)
-uv run pytest                    # collected 0 items (정상)
+# 4. 테스트
+uv run pytest                    # 502 tests 통과
 
 # 5. Claude Code Skill
 claude skills list               # blog-writer 표시 확인

@@ -5,7 +5,7 @@ tags:
   - phase/all
 date: 2026-05-20
 created: 2026-05-20
-updated: 2026-05-21
+updated: 2026-05-23
 aliases:
   - 문서 인덱스
   - Documentation Index
@@ -32,14 +32,14 @@ status: active
 | 06 | [06-ux-design.md](06-ux-design.md) | Phase 6 — UX/UI 설계 (3-pane 워크스페이스) | ✅ 완료 | 🟡 |
 | 07 | [07-project-setup.md](07-project-setup.md) | Phase 7 — Git/UV/환경 셋업 | ✅ 완료 | 🔥 |
 | 08 | [08-milestones.md](08-milestones.md) | Phase 8 — 마일스톤 + Gantt | ✅ 완료 | 🔥 |
-| 09 | [09-development-guide.md](09-development-guide.md) | Phase 9 — 개발 가이드 (수직 슬라이스) | 🔄 작성 예정 | 🟡 |
-| 10 | [10-qa-test-plan.md](10-qa-test-plan.md) | Phase 10 — QA + 양식 검증 | 🔄 작성 예정 | 🟡 |
-| 11 | [11-deployment.md](11-deployment.md) | Phase 11 — Tistory 배포 가이드 | 🔄 작성 예정 | 🟡 |
-| 12 | [12-demo-scenarios.md](12-demo-scenarios.md) | Phase 12 — 데모 시나리오 | 🔄 작성 예정 | 🟢 |
-| 13 | [13-success-metrics.md](13-success-metrics.md) | Phase 13 — KPI (속도/품질/비용) | 🔄 작성 예정 | 🔥 |
-| 14 | [14-documentation-index.md](14-documentation-index.md) | Phase 14 — 산출물 정리 | 🔄 작성 예정 | 🟡 |
-| 15 | [15-roadmap.md](15-roadmap.md) | Phase 15 — 추후 방향성 | 🔄 작성 예정 | 🟡 |
-| 16 | [16-retrospective.md](16-retrospective.md) | Phase 16 — 회고 템플릿 | 🟢 사용 후 채움 | 🟢 |
+| 09 | [09-manual-test-scenarios.md](09-manual-test-scenarios.md) | Phase 9 — 수동 테스트 시나리오 | ✅ 완료 | 🟡 |
+| 10 | 10-qa-test-plan | Phase 10 — QA + 양식 검증 | 📋 코드 완료, 문서 미작성 | 🟡 |
+| 11 | 11-deployment | Phase 11 — 배포 가이드 | 📋 코드 완료, 문서 미작성 | 🟡 |
+| 12 | 12-demo-scenarios | Phase 12 — 데모 시나리오 | ⏳ M7에서 작성 | 🟢 |
+| 13 | 13-success-metrics | Phase 13 — KPI (속도/품질/비용) | ⏳ M7에서 작성 | 🔥 |
+| 14 | 14-documentation-index | Phase 14 — 산출물 정리 | ⏳ M8에서 작성 | 🟡 |
+| 15 | 15-roadmap | Phase 15 — 추후 방향성 | ⏳ M8에서 작성 | 🟡 |
+| 16 | 16-retrospective | Phase 16 — 회고 템플릿 | 🟢 사용 후 채움 | 🟢 |
 
 **범례**: 🔥 필수 / 🟡 중요 / 🟢 권장 · ✅ 완료 / 🔄 진행 중 / ⏳ 예정
 

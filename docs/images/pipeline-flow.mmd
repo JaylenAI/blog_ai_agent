@@ -1,0 +1,27 @@
+flowchart LR
+    subgraph 조사["📚 자료조사"]
+        S1["Router\n주제 분석"]
+        S2["Researcher\n4채널 병렬"]
+    end
+
+    subgraph 작성["✍️ 본문 작성"]
+        S3["Outliner\n아웃라인"]
+        S4["Generator\n본문 + 이미지"]
+    end
+
+    subgraph 검증["✅ 품질 검증"]
+        S5["Validator\n30항목 자동 검증"]
+        S6["Publisher\n발행 준비"]
+    end
+
+    S1 --> S2
+    S2 --> S3
+    S3 --> G1{{"🔒 Gate 1\n아웃라인 검수"}}
+    G1 --> S4
+    S4 --> S5
+    S5 --> G2{{"🔒 Gate 2\n최종 검수"}}
+    G2 --> S6
+
+    style G1 fill:#3b82f6,stroke:#1d4ed8,color:#fff
+    style G2 fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    style S6 fill:#10b981,stroke:#059669,color:#fff

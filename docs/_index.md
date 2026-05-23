@@ -5,7 +5,7 @@ tags:
   - phase/all
 date: 2026-05-20
 created: 2026-05-20
-updated: 2026-05-20
+updated: 2026-05-23
 aliases:
   - Blog AI Agent Home
   - blog_ai_agent
@@ -137,14 +137,14 @@ graph TD
 
 | 항목 | 값 |
 |------|------|
-| 프로젝트 단계 | **Phase 8 완료 · 프로젝트 구조 재정비 완료 · M3 진입 대기** |
-| 마지막 업데이트 | 2026-05-21 |
-| 활성 마일스톤 | M2 완료 ✅ |
-| 다음 마일스톤 | M3 — 파이프라인 코어 (Router→Researcher→Outliner→Gate 1) |
-| 플랫폼 형태 | 웹 플랫폼 (React + Vite + FastAPI + Claude Code CLI) |
-| 작성 완료 문서 | 16 / 40+ (blog-style.md 추가) |
-| 활성 ADR | 5건 작성 예정 |
-| GitHub 푸시 | ❌ (아직 안 함) |
+| 프로젝트 단계 | **M6 완료 · v0.1.0 릴리스 준비** |
+| 마지막 업데이트 | 2026-05-23 |
+| 완료 마일스톤 | M1~M6 ✅ |
+| 다음 마일스톤 | M7 — 실제 글 3편 발행 + 성과 측정 |
+| 플랫폼 형태 | 웹 플랫폼 (React 19 + Vite 6 + FastAPI + Claude Code CLI) |
+| 테스트 | 862건 (백엔드 502 + 프론트엔드 344 + E2E 16) |
+| CI/CD | GitHub Actions 3-job 파이프라인 |
+| GitHub 푸시 | ✅ dev 브랜치 |
 
 ---
 

@@ -4,7 +4,7 @@ tags:
   - phase/8
 date: 2026-05-21
 created: 2026-05-21
-updated: 2026-05-21
+updated: 2026-05-23
 aliases:
   - Milestones
   - Phase 8
@@ -29,13 +29,13 @@ related:
 | 마일스톤 | Phase | 이름 | 목표 | 기간 | 결과물 |
 |----------|-------|------|------|------|--------|
 | **M1** | 0~5 | 기획/설계 완료 | 16 Phase 문서 중 기획~설계 완성 | ✅ 완료 | docs/00~05 (12문서) |
-| **M2** | 6~8 | UX/셋업/마일스톤 | UI/UX 프로토타입 + 개발 환경 + 일정 | ✅ 현재 | docs/06~08 |
-| **M3** | 9 | 파이프라인 코어 | Stage 1~3 (Router→Researcher→Outliner) + Gate 1 | 2주 | MVP 반쪽: 주제→아웃라인 |
-| **M4** | 9 | 본문 생성 | Stage 4 (Generator) + 이미지 파이프라인 | 2주 | 전체 글 생성 가능 |
-| **M5** | 9 | 검증/발행 | Stage 5~6 (Validator→Publisher) + Gate 2 | 1.5주 | E2E 1편 완성 |
-| **M6** | 10~11 | QA/배포 | 테스트 80%+ 커버리지 + 안정화 | 1주 | v0.1.0 릴리스 |
-| **M7** | 12~13 | 데모/성과 | 실제 글 3편 발행 + 성과 측정 | 1주 | 포트폴리오 |
-| **M8** | 14~16 | 고도화 | Playwright 발행, 썸네일, 성과 대시보드 | 지속 | v0.2.0+ |
+| **M2** | 6~8 | UX/셋업/마일스톤 | UI/UX 프로토타입 + 개발 환경 + 일정 | ✅ 완료 | docs/06~08 |
+| **M3** | 9 | 파이프라인 코어 | Stage 1~3 (Router→Researcher→Outliner) + Gate 1 | ✅ 완료 | MVP 반쪽: 주제→아웃라인 |
+| **M4** | 9 | 본문 생성 | Stage 4 (Generator) + 이미지 파이프라인 | ✅ 완료 | 전체 글 생성 가능 |
+| **M5** | 9 | 검증/발행 | Stage 5~6 (Validator→Publisher) + Gate 2 | ✅ 완료 | E2E 1편 완성 |
+| **M6** | 10~11 | QA/배포 | 테스트 80%+ 커버리지 + 안정화 | ✅ 완료 | v0.1.0 릴리스 준비 |
+| **M7** | 12~13 | 데모/성과 | 실제 글 3편 발행 + 성과 측정 | 대기 | 포트폴리오 |
+| **M8** | 14~16 | 고도화 | Playwright 발행, 썸네일, 성과 대시보드 | 대기 | v0.2.0+ |
 
 ---
 
@@ -57,30 +57,29 @@ gantt
     Phase 8 마일스톤          :done, m2c, 2026-05-21, 1d
 
     section M3 파이프라인 코어
-    디렉토리 스캐폴딩         :m3a, 2026-05-22, 1d
-    Stage 1 Router           :m3b, 2026-05-22, 3d
-    Stage 2 Researcher       :m3c, after m3b, 5d
-    Stage 3 Outliner         :m3d, after m3c, 3d
-    Gate 1 CLI 인터랙션       :m3e, after m3d, 1d
-    M3 통합 테스트            :m3f, after m3e, 1d
+    디렉토리 스캐폴딩         :done, m3a, 2026-05-21, 1d
+    Stage 1 Router           :done, m3b, 2026-05-21, 1d
+    Stage 2 Researcher       :done, m3c, after m3b, 1d
+    Stage 3 Outliner         :done, m3d, after m3c, 1d
+    Gate 1 인터랙션           :done, m3e, after m3d, 1d
+    M3 통합 테스트            :done, m3f, after m3e, 1d
 
     section M4 본문 생성
-    Stage 4 Generator         :m4a, after m3f, 5d
-    Mermaid 렌더러            :m4b, after m3f, 3d
-    SVG 빌더                 :m4c, after m4b, 2d
-    이미지 후처리              :m4d, after m4c, 1d
-    M4 통합 테스트            :m4e, after m4a, 2d
+    Stage 4 Generator         :done, m4a, after m3f, 1d
+    Mermaid 렌더러            :done, m4b, after m3f, 1d
+    이미지 후처리              :done, m4d, after m4b, 1d
+    M4 통합 테스트            :done, m4e, after m4a, 1d
 
     section M5 검증/발행
-    Stage 5 Validator 자동    :m5a, after m4e, 3d
-    Oracle Subagent           :m5b, after m5a, 2d
-    Stage 6 Publisher HTML    :m5c, after m5b, 2d
-    Gate 2 CLI 인터랙션       :m5d, after m5c, 1d
-    E2E 1편 완성 테스트       :m5e, after m5d, 2d
+    Stage 5 Validator 자동    :done, m5a, after m4e, 1d
+    Oracle Subagent           :done, m5b, after m5a, 1d
+    Stage 6 Publisher HTML    :done, m5c, after m5b, 1d
+    Gate 2 인터랙션           :done, m5d, after m5c, 1d
+    E2E 1편 완성 테스트       :done, m5e, after m5d, 1d
 
     section M6 QA/배포
-    단위 테스트 보강           :m6a, after m5e, 3d
-    커버리지 80%+ 달성         :m6b, after m6a, 2d
+    단위 테스트 보강           :done, m6a, after m5e, 1d
+    커버리지 90% 달성          :done, m6b, after m6a, 1d
     v0.1.0 태그               :milestone, m6c, after m6b, 0d
 
     section M7 데모/성과
@@ -293,19 +292,13 @@ flowchart LR
 | Phase 6 | `06-ux-design.md` | ✅ 완료 | M2 |
 | Phase 7 | `07-project-setup.md` | ✅ 완료 | M2 |
 | Phase 8 | `08-milestones.md` | ✅ 완료 | M2 |
-| Phase 9 | `09-development-guide.md` | 🔄 다음 | M3~M5 |
-| Phase 10 | `10-qa-test-plan.md` | ❌ 대기 | M6 |
-| Phase 11 | `11-deployment.md` | ❌ 대기 | M6 |
-| Phase 12 | `12-demo-scenarios.md` | ❌ 대기 | M7 |
-| Phase 13 | `13-success-metrics.md` | ❌ 대기 | M7 |
-| Phase 14 | `14-documentation-index.md` | ❌ 대기 | M8 |
-| Phase 15 | `15-roadmap.md` | ❌ 대기 | M8 |
-| Phase 16 | `16-retrospective.md` | ❌ 대기 | M8 |
+| Phase 9~16 | 파이프라인 코어 ~ QA/배포 | ✅ 완료 (코드) | M3~M6 |
+| Phase 17~22 | 프론트엔드 구현 + 테스트 보강 | ✅ 완료 | M6 |
 
 ### 다음 액션
 
-1. **Phase 9** (`09-development-guide.md`) — 수직 슬라이스 개발 가이드 작성
-2. **M3 시작** — `feature/pipeline-core` 브랜치 생성 → Router 구현
+1. **v0.1.0 태깅** — main 머지 후 릴리스 태그
+2. **M7 시작** — 실제 글 3편 발행 + 성과 측정
 
 ---
 

@@ -5,27 +5,41 @@
 | 영역 | 상태 | 상세 |
 |------|------|------|
 | 백엔드 파이프라인 | ✅ 완료 | 6 Stage + 2 Gate 전체 구현 (Router→Researcher→Outliner→Gate1→Generator→Validator→Gate2→Publisher) |
-| 백엔드 테스트 | ✅ 470건, 89.95% | pytest + pytest-cov |
+| 백엔드 테스트 | ✅ 502건, 90% | pytest + pytest-cov (32 테스트 파일) |
 | 프론트엔드 컴포넌트 | ✅ 30개 | 3-pane 워크스페이스, Launcher, Gate 모달 등 |
-| 프론트엔드 테스트 | ✅ 261+건 (32파일) | 컴포넌트 19 + 훅 5 + 스토어 6 + API 2 |
+| 프론트엔드 테스트 | ✅ 344건 (32파일) | 컴포넌트 19 + 훅 5 + 스토어 6 + API 2 |
 | 프론트엔드 스토어/훅 | ✅ 완료 | Zustand 6 스토어, 커스텀 훅 5개 |
 | API 엔드포인트 | ✅ 24개 | articles, pipeline, health, formats, settings |
 | SSE 실시간 스트리밍 | ✅ 완료 | REST → SSE 전환, 재연결 로직 포함 |
 | Zod 유효성 검증 | ✅ 완료 | API 응답 스키마 전체 적용 |
-| E2E 테스트 | ✅ 16건 | Playwright (앱 로딩, SSE 플로우, 사이드바, 에러 처리, 상태 복원) |
+| E2E 테스트 | ✅ 16건 | Playwright 5 시나리오 (앱 로딩, SSE 플로우, 사이드바, 에러 처리, 상태 복원) |
 | Docker | ✅ 완료 | docker-compose.yml (backend + frontend + healthcheck) |
-| CI/CD | ✅ 완료 | GitHub Actions (test + lint + e2e) |
+| CI/CD | ✅ 완료 | GitHub Actions 3-job 파이프라인 (backend-test → frontend-build → frontend-e2e) |
 | Rate Limiting | ✅ 완료 | API 미들웨어 적용 |
 | Graceful Shutdown | ✅ 완료 | 시그널 핸들링 |
 | Health Check | ✅ 완료 | Claude CLI + mmdc + Obsidian vault 상세 점검 |
-| Code Splitting | ✅ 완료 | 561KB → 213KB (메인 번들) |
+| Code Splitting | ✅ 완료 | 561KB → 213KB (메인 번들), highlight.js 별도 청크 분리 |
 | 환경 분리 | ✅ 완료 | .env.development / .env.production |
+
+## 테스트 요약
+
+| 영역 | 테스트 수 | 커버리지 | 도구 |
+|------|----------|---------|------|
+| 백엔드 유닛/통합 | 502건 | 90% | pytest + pytest-cov |
+| 프론트엔드 유닛 | 344건 | — | Vitest + Testing Library |
+| E2E | 16건 | — | Playwright (5 시나리오 파일) |
+| **합계** | **862건** | — | — |
 
 ## 최근 작업
 
-- ESLint 오류 전체 수정 완료
-- 컴포넌트 테스트 커버리지 확대 (19개 컴포넌트 테스트 파일)
-- SSE 재연결 방어 로직 개선 (optional chaining 적용)
+- README.md 전면 개편 (뱃지, 기능 그리드, Mermaid 아키텍처)
+- CONTRIBUTING.md 신규 작성
+- CI 린트 에러 해소 (ruff unused imports, pnpm 버전 고정)
+- ESLint `no-explicit-any` 16건 전체 수정
+- 컴포넌트 테스트 83건 추가 (10개 신규 테스트 파일)
+- 백엔드 포맷 레지스트리 테스트 27건 추가
+- SSE 재연결 방어 로직 개선 (optional chaining)
+- Vite 빌드 최적화 (markdown 청크 516KB → 338KB)
 
 ## Phase 완료 현황
 

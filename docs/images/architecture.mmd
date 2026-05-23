@@ -1,0 +1,19 @@
+flowchart TD
+    subgraph Web["웹 플랫폼"]
+        FE["React 19 + Vite 6\n3-pane 워크스페이스"]
+        BE["FastAPI\nSSE 스트리밍"]
+    end
+
+    FE <-->|HTTP / SSE| BE
+    BE -->|subprocess| CLI["Claude Code CLI\n(Max 구독)"]
+
+    CLI --> S1["1. Router\n주제 분석 · 포맷 추천"]
+    S1 --> S2["2. Researcher\n4 Librarian 병렬 조사"]
+    S2 --> S3["3. Outliner\n아웃라인 생성"]
+    S3 --> G1{Gate 1\n아웃라인 검수}
+    G1 -->|승인| S4["4. Generator\n본문 + 다이어그램"]
+    G1 -->|수정 요청| S3
+    S4 --> S5["5. Validator\n30항목 검증"]
+    S5 --> G2{Gate 2\n최종 검수}
+    G2 -->|승인| S6["6. Publisher\n발행 준비"]
+    G2 -->|수정 요청| S4
