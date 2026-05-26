@@ -351,6 +351,10 @@ function PrePublishChecklist({ runId, onAllChecked }: { runId: number; onAllChec
             textDecoration: checked[i] ? "line-through" : "none",
           }}
           onClick={() => toggle(i)}
+          onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") toggle(i); }}
+          role="checkbox"
+          aria-checked={checked[i]}
+          tabIndex={0}
         >
           <span
             style={{

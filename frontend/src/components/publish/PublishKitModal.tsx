@@ -313,7 +313,26 @@ function MetaTab({
   kit: PublishKit;
   copyText: (text: string, label: string) => Promise<void>;
 }) {
-  const tagsText = kit.tags.join(", ");
+  const [localTags, setLocalTags] = useState<string[]>(kit.tags);
+  const [newTag, setNewTag] = useState("");
+
+  useEffect(() => {
+    setLocalTags(kit.tags);
+  }, [kit.tags]);
+
+  const addTag = useCallback(() => {
+    const trimmed = newTag.trim();
+    if (trimmed && !localTags.includes(trimmed)) {
+      setLocalTags((prev) => [...prev, trimmed]);
+      setNewTag("");
+    }
+  }, [newTag, localTags]);
+
+  const removeTag = useCallback((tag: string) => {
+    setLocalTags((prev) => prev.filter((t) => t !== tag));
+  }, []);
+
+  const tagsText = localTags.join(", ");
 
   return (
     <div className="pk-meta-tab">
@@ -334,23 +353,53 @@ function MetaTab({
         value={STATUS_LABELS[kit.status] ?? kit.status}
       />
 
-      {kit.tags.length > 0 && (
-        <div className="pk-meta-tags">
-          <div className="pk-meta-tags-label">태그 목록</div>
-          <div className="pk-meta-tags-list">
-            {kit.tags.map((tag) => (
-              <button
-                key={tag}
-                className="pk-tag-chip"
-                onClick={() => copyText(tag, tag)}
-                title="클릭하여 복사"
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
+      <div className="pk-meta-tags">
+        <div className="pk-meta-tags-label">태그 편집</div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+          <input
+            className="settings-input"
+            type="text"
+            value={newTag}
+            onChange={(e) => setNewTag(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") addTag(); }}
+            placeholder="새 태그 입력"
+            style={{ flex: 1, padding: "4px 8px", fontSize: 12 }}
+          />
+          <button
+            className="pk-action-btn"
+            onClick={addTag}
+            disabled={!newTag.trim()}
+            style={{ padding: "4px 10px", fontSize: 12 }}
+          >
+            추가
+          </button>
         </div>
-      )}
+        <div className="pk-meta-tags-list">
+          {localTags.map((tag) => (
+            <span
+              key={tag}
+              className="pk-tag-chip"
+              style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+            >
+              {tag}
+              <button
+                onClick={() => removeTag(tag)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--text-muted)",
+                  padding: 0,
+                  lineHeight: 1,
+                }}
+                aria-label={`${tag} 태그 삭제`}
+              >
+                <Icons.X s={10} w={2} />
+              </button>
+            </span>
+          ))}
+        </div>
+      </div>
 
       <div className="pk-meta-actions">
         <button

@@ -5,6 +5,7 @@ import type {
   ValidationItem,
   ValidationSummary,
 } from "../types/pipeline";
+import { PIPELINE } from "../constants/ui";
 
 interface PipelineState {
   currentRun: PipelineRun | null;
@@ -43,8 +44,6 @@ const INITIAL: Pick<
   error: null,
 };
 
-const MAX_EVENTS = 500;
-
 export const usePipelineStore = create<PipelineState>((set) => ({
   ...INITIAL,
 
@@ -61,7 +60,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
         return s;
       }
       const next = [...s.events, event];
-      return { events: next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next };
+      return { events: next.length > PIPELINE.MAX_EVENTS ? next.slice(-PIPELINE.MAX_EVENTS) : next };
     }),
   setEvents: (events) => set({ events }),
   setValidations: (items, summary) =>
