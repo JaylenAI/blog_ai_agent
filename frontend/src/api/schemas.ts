@@ -23,9 +23,10 @@ export const ArticleSchema = z.object({
   content_path: z.string().nullable(),
   word_count: z.number(),
   image_count: z.number(),
-  tags: z.array(z.string()).optional(),
-  reference_count: z.number().optional(),
-  section_count: z.number().optional(),
+  tags: z.array(z.string()),
+  reference_count: z.number(),
+  section_count: z.number(),
+  thumbnail_path: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -90,6 +91,14 @@ export const FormatSuggestionSchema = z.object({
   reason: z.string(),
 });
 
+export const ReferenceItemSchema = z.object({
+  url: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  relevance_score: z.number(),
+  source_type: z.string(),
+});
+
 export const PublishKitSchema = z.object({
   title: z.string(),
   category: z.string(),
@@ -98,6 +107,8 @@ export const PublishKitSchema = z.object({
   html: z.string().nullable(),
   images: z.array(z.object({ name: z.string(), url: z.string() })),
   diagrams: z.array(z.object({ name: z.string(), content: z.string() })),
+  references: z.array(ReferenceItemSchema),
+  thumbnail_url: z.string().nullable(),
   word_count: z.number(),
   status: z.string(),
 });

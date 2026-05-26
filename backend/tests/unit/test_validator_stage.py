@@ -1,3 +1,4 @@
+import copy
 from unittest.mock import AsyncMock, MagicMock
 
 from app.formats.schema import (
@@ -19,7 +20,12 @@ from app.pipeline.stages.s5_validator import (
     _check_keyword_presence,
     _check_no_faq,
     _check_no_references_section,
+    _check_readability,
     _check_section_count,
+    _check_slop_can_do,
+    _check_slop_empty_emphasis,
+    _check_slop_monotony,
+    _check_slop_superlatives,
     _check_title_length,
     _compute_summary,
     _run_rule_checks,
@@ -161,14 +167,14 @@ async def test_validator_handles_claude_error() -> None:
     result = await stage.execute(_make_input())
 
     assert result.success is True
-    assert result.data["summary"]["total"] == 9
+    assert result.data["summary"]["total"] == 14
 
 
 async def test_validator_combines_rule_and_claude() -> None:
     stage, _, _ = _make_stage()
     result = await stage.execute(_make_input())
 
-    assert result.data["summary"]["total"] == 11
+    assert result.data["summary"]["total"] == 16
 
 
 def test_check_char_count_pass() -> None:
@@ -282,6 +288,177 @@ def test_compute_summary_empty() -> None:
     assert summary["score"] == 0.0
 
 
-def test_run_rule_checks_returns_nine() -> None:
+def test_run_rule_checks_returns_fourteen() -> None:
     results = _run_rule_checks(GOOD_CONTENT, MOCK_META, DEFAULT_SPEC)
-    assert len(results) == 9
+    assert len(results) == 14
+
+
+def test_slop_can_do_pass() -> None:
+    assert _check_slop_can_do("일반 문장입니다.")["passed"] is True
+
+
+def test_slop_can_do_fail() -> None:
+    text = "할 수 있습니다. " * 8
+    result = _check_slop_can_do(text)
+    assert result["passed"] is False
+    assert result["score"] < 1.0
+
+
+def test_slop_empty_emphasis_pass() -> None:
+    assert _check_slop_empty_emphasis("이것은 중요한 개념입니다.")["passed"] is True
+
+
+def test_slop_empty_emphasis_fail() -> None:
+    text = "매우 중요합니다. 핵심적입니다. 가장 중요한 것은 매우 핵심입니다."
+    assert _check_slop_empty_emphasis(text)["passed"] is False
+
+
+def test_slop_monotony_pass() -> None:
+    text = "A는 B입니다. C를 합시다. D가 됩니다."
+    assert _check_slop_monotony(text)["passed"] is True
+
+
+def test_slop_monotony_fail() -> None:
+    text = "A입니다. B입니다. C입니다. D입니다. E입니다."
+    assert _check_slop_monotony(text)["passed"] is False
+
+
+def test_slop_superlatives_pass() -> None:
+    assert _check_slop_superlatives("좋은 도구입니다.")["passed"] is True
+
+
+def test_slop_superlatives_fail() -> None:
+    text = "최고의 도구이자 유일한 방법이며 가장 좋은 선택입니다."
+    assert _check_slop_superlatives(text)["passed"] is False
+
+
+def test_readability_normal() -> None:
+    text = "트랜스포머 아키텍처는 자연어 처리의 핵심 기술입니다. 이 모델은 어텐션 메커니즘을 활용하여 긴 문맥을 효과적으로 처리합니다. 특히 셀프 어텐션은 입력 시퀀스 내의 모든 위치 간 관계를 동시에 계산합니다."
+    result = _check_readability(text)
+    assert result["passed"] is True
+
+
+def test_readability_too_long() -> None:
+    text = ("가" * 100 + ". ") * 5
+    result = _check_readability(text)
+    assert result["passed"] is False
+
+
+# ──────────────────────────────────────────────
+# Oracle 통합 테스트
+# ──────────────────────────────────────────────
+
+_MOCK_ORACLE_VALIDATIONS_TEMPLATE = {
+    "validations": [
+        {
+            "category": "style",
+            "item": "비유 적절성",
+            "passed": True,
+            "score": 0.85,
+            "message": "비유가 적절함",
+        },
+        {
+            "category": "aeo",
+            "item": "정의 품질",
+            "passed": False,
+            "score": 0.5,
+            "message": "정의가 모호함",
+        },
+    ]
+}
+
+
+def _fresh_oracle_response() -> dict:
+    """_run_oracle이 딕셔너리를 mutation하므로 매 호출마다 새 복사본을 반환한다."""
+    return copy.deepcopy(_MOCK_ORACLE_VALIDATIONS_TEMPLATE)
+
+
+def _make_input_with_oracle() -> StageInput:
+    return StageInput(
+        article_id=1,
+        slug="ai란-무엇인가",
+        topic="AI란 무엇인가?",
+        data={"use_oracle": True},
+    )
+
+
+async def test_validator_calls_oracle_when_use_oracle_flag() -> None:
+    """use_oracle=True 플래그가 있으면 oracle이 호출되어 run_json이 2번 호출된다."""
+    stage, mock_claude, _ = _make_stage()
+    mock_claude.run_json.side_effect = [
+        MOCK_CLAUDE_VALIDATIONS,
+        _fresh_oracle_response(),
+    ]
+
+    result = await stage.execute(_make_input_with_oracle())
+
+    assert result.success is True
+    assert mock_claude.run_json.call_count == 2
+    assert result.data["oracle_used"] is True
+
+
+async def test_validator_calls_oracle_for_long_content() -> None:
+    """content가 10000자 이상이면 use_oracle 플래그 없이도 oracle이 호출된다."""
+    long_content = "가" * 10001
+    stage, mock_claude, _ = _make_stage(content=long_content)
+    mock_claude.run_json.side_effect = [
+        MOCK_CLAUDE_VALIDATIONS,
+        _fresh_oracle_response(),
+    ]
+
+    result = await stage.execute(_make_input())
+
+    assert result.success is True
+    assert mock_claude.run_json.call_count == 2
+    assert result.data["oracle_used"] is True
+
+
+async def test_validator_oracle_items_prefixed() -> None:
+    """Oracle 검증 항목에는 '[Oracle]' 접두사가 붙는다."""
+    stage, mock_claude, _ = _make_stage()
+    mock_claude.run_json.side_effect = [
+        MOCK_CLAUDE_VALIDATIONS,
+        _fresh_oracle_response(),
+    ]
+
+    result = await stage.execute(_make_input_with_oracle())
+
+    oracle_items = [
+        v for v in result.data["validations"]
+        if v.get("item", "").startswith("[Oracle]")
+    ]
+    assert len(oracle_items) == 2
+    assert oracle_items[0]["item"] == "[Oracle] 비유 적절성"
+    assert oracle_items[1]["item"] == "[Oracle] 정의 품질"
+
+
+async def test_validator_oracle_failure_returns_empty() -> None:
+    """Oracle Claude 호출이 실패해도 전체 결과는 성공하며, rule+validator 항목만 남는다."""
+    stage, mock_claude, _ = _make_stage()
+    mock_claude.run_json.side_effect = [
+        MOCK_CLAUDE_VALIDATIONS,
+        RuntimeError("Oracle CLI fail"),
+    ]
+
+    result = await stage.execute(_make_input_with_oracle())
+
+    assert result.success is True
+    assert result.data["oracle_used"] is True
+    # rule 14개 + claude validator 2개 = 16개 (oracle 실패로 0개 추가)
+    assert result.data["summary"]["total"] == 16
+    oracle_items = [
+        v for v in result.data["validations"]
+        if v.get("item", "").startswith("[Oracle]")
+    ]
+    assert len(oracle_items) == 0
+
+
+async def test_validator_no_oracle_by_default() -> None:
+    """기본 StageInput(use_oracle 없음, 짧은 content)에서는 oracle이 호출되지 않는다."""
+    stage, mock_claude, _ = _make_stage()
+
+    result = await stage.execute(_make_input())
+
+    assert result.success is True
+    assert mock_claude.run_json.call_count == 1
+    assert result.data["oracle_used"] is False

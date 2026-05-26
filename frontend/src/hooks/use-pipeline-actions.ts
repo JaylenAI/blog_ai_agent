@@ -55,6 +55,18 @@ export function usePipelineActions() {
     [setRunning, setError, setPipelineMode, closeGateModal],
   );
 
+  const rejectAndRevise = useCallback(
+    async (runId: number, feedback: string) => {
+      closeGateModal();
+
+      await startStream(
+        `/pipeline/runs/${runId}/reject-and-revise/stream`,
+        { body: JSON.stringify({ feedback }) },
+      );
+    },
+    [startStream, closeGateModal],
+  );
+
   const fetchValidations = useCallback(
     async (runId: number) => {
       try {
@@ -69,5 +81,5 @@ export function usePipelineActions() {
     [setValidations],
   );
 
-  return { approveGate, rejectGate, fetchValidations };
+  return { approveGate, rejectGate, rejectAndRevise, fetchValidations };
 }

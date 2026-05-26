@@ -3,20 +3,9 @@ import { api } from "../../api/client";
 import { useAppStore } from "../../stores/app-store";
 import { Icons } from "../common/Icons";
 import { LazyMarkdownRenderer as MarkdownRenderer } from "../editor/LazyMarkdownRenderer";
+import type { PublishKit, ReferenceItem } from "../../types/publish";
 
-type Tab = "markdown" | "html" | "meta" | "images";
-
-interface PublishKit {
-  title: string;
-  category: string;
-  tags: string[];
-  markdown: string | null;
-  html: string | null;
-  images: { name: string; url: string }[];
-  diagrams: { name: string; content: string }[];
-  word_count: number;
-  status: string;
-}
+type Tab = "markdown" | "html" | "meta" | "references" | "images";
 
 interface Props {
   articleId: number;
@@ -91,6 +80,9 @@ export function PublishKitModal({ articleId, onClose }: Props) {
             >
               {t.icon}
               {t.label}
+              {t.id === "references" && kit && kit.references.length > 0 && (
+                <span className="pk-tab-badge">{kit.references.length}</span>
+              )}
               {t.id === "images" && kit && kit.images.length > 0 && (
                 <span className="pk-tab-badge">{kit.images.length}</span>
               )}
@@ -116,6 +108,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "markdown", label: "Markdown", icon: <Icons.Doc s={14} /> },
   { id: "html", label: "HTML", icon: <Icons.Hash s={14} /> },
   { id: "meta", label: "메타 정보", icon: <Icons.Tag s={14} /> },
+  { id: "references", label: "참고자료", icon: <Icons.ExternalLink s={14} /> },
   { id: "images", label: "이미지", icon: <Icons.Eye s={14} /> },
 ];
 
@@ -137,6 +130,8 @@ function TabContent({
       return <HtmlTab kit={kit} articleId={articleId} copyText={copyText} />;
     case "meta":
       return <MetaTab kit={kit} copyText={copyText} />;
+    case "references":
+      return <ReferencesTabContent references={kit.references} copyText={copyText} />;
     case "images":
       return <ImagesTab kit={kit} />;
   }
@@ -234,12 +229,19 @@ function HtmlTab({
 
   useEffect(() => {
     if (!kit.html && !backendHtml && backendChecked && kit.markdown && renderRef.current) {
-      const timer = setTimeout(() => {
-        if (renderRef.current) {
-          setGeneratedHtml(renderRef.current.innerHTML);
+      const el = renderRef.current;
+      if (el.innerHTML.trim()) {
+        setGeneratedHtml(el.innerHTML);
+        return;
+      }
+      const observer = new MutationObserver(() => {
+        if (el.innerHTML.trim()) {
+          setGeneratedHtml(el.innerHTML);
+          observer.disconnect();
         }
-      }, 500);
-      return () => clearTimeout(timer);
+      });
+      observer.observe(el, { childList: true, subtree: true });
+      return () => observer.disconnect();
     }
   }, [kit.html, kit.markdown, backendHtml, backendChecked]);
 
@@ -391,8 +393,9 @@ function MetaRow({
 
 function ImagesTab({ kit }: { kit: PublishKit }) {
   const addToast = useAppStore((s) => s.addToast);
+  const hasContent = kit.images.length > 0 || kit.diagrams.length > 0 || kit.thumbnail_url;
 
-  if (kit.images.length === 0 && kit.diagrams.length === 0) {
+  if (!hasContent) {
     return (
       <EmptyState
         icon={<Icons.Eye s={28} w={1} />}
@@ -418,6 +421,29 @@ function ImagesTab({ kit }: { kit: PublishKit }) {
 
   return (
     <div className="pk-images-tab">
+      {kit.thumbnail_url && (
+        <>
+          <div className="pk-images-section-title">썸네일</div>
+          <div className="pk-thumbnail-wrap">
+            <a href={kit.thumbnail_url} target="_blank" rel="noopener noreferrer">
+              <img
+                src={kit.thumbnail_url}
+                alt="썸네일"
+                className="pk-thumbnail-img"
+                loading="lazy"
+              />
+            </a>
+            <button
+              className="pk-copy-btn"
+              style={{ marginTop: 8 }}
+              onClick={() => handleDownload(kit.thumbnail_url!, "thumbnail.png")}
+            >
+              <Icons.ExternalLink s={13} /> 다운로드
+            </button>
+          </div>
+        </>
+      )}
+
       {kit.images.length > 0 && (
         <>
           <div className="pk-images-section-title">
@@ -468,6 +494,83 @@ function ImagesTab({ kit }: { kit: PublishKit }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  official: "공식",
+  github: "GitHub",
+  blog_en: "영문 블로그",
+  blog_kr: "한국어 블로그",
+};
+
+function ReferencesTabContent({
+  references,
+  copyText,
+}: {
+  references: ReferenceItem[];
+  copyText: (text: string, label: string) => Promise<void>;
+}) {
+  if (references.length === 0) {
+    return (
+      <EmptyState
+        icon={<Icons.ExternalLink s={28} w={1} />}
+        title="참고자료 없음"
+        description="파이프라인 실행 시 자동으로 수집됩니다."
+      />
+    );
+  }
+
+  const grouped = references.reduce<Record<string, ReferenceItem[]>>((acc, ref) => {
+    const key = ref.source_type || "other";
+    return { ...acc, [key]: [...(acc[key] ?? []), ref] };
+  }, {});
+
+  return (
+    <div className="pk-references-tab">
+      <div className="pk-ref-summary">
+        총 {references.length}건의 참고자료
+        <button
+          className="pk-copy-btn"
+          onClick={() => {
+            const text = references
+              .map((r) => `- [${r.title}](${r.url})\n  ${r.summary}`)
+              .join("\n\n");
+            copyText(text, "참고자료 전체");
+          }}
+        >
+          <Icons.Share s={13} /> 전체 복사
+        </button>
+      </div>
+      {Object.entries(grouped).map(([type, refs]) => (
+        <div key={type} className="pk-ref-group">
+          <div className="pk-ref-group-title">
+            {SOURCE_LABELS[type] ?? type}
+            <span className="pk-tab-badge">{refs.length}</span>
+          </div>
+          {refs.map((ref, i) => (
+            <div key={`${ref.url}-${i}`} className="pk-ref-card">
+              <div className="pk-ref-card-head">
+                <a
+                  href={ref.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pk-ref-title"
+                >
+                  {ref.title}
+                  <Icons.ExternalLink s={11} />
+                </a>
+                <span className="pk-ref-score">
+                  {Math.round(ref.relevance_score * 100)}%
+                </span>
+              </div>
+              <p className="pk-ref-summary-text">{ref.summary}</p>
+              <span className="pk-ref-url">{ref.url}</span>
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

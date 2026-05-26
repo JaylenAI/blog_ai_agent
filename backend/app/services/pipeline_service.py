@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import AsyncGenerator, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +10,7 @@ from app.db.repositories.article_repo import ArticleRepository
 from app.db.repositories.pipeline_repo import PipelineRepository
 from app.db.repositories.validation_repo import ValidationRepository
 from app.exceptions import InvalidStateError, NotFoundError
+from app.models.article import Article
 from app.models.pipeline_run import PipelineRun, PipelineStage, PipelineStatus
 from app.models.validation import Validation, ValidationCategory
 from app.pipeline.base import PipelineEvent, Stage
@@ -76,6 +79,7 @@ class PipelineService:
         ):
             yield event
 
+        await self._persist_metadata(article)
         await self._save_validations(pipeline_run.id, article.slug)
 
     async def resume_pipeline(
@@ -127,16 +131,75 @@ class PipelineService:
         ):
             yield event
 
+        await self._persist_metadata(article)
         await self._save_validations(run.id, article.slug)
 
-    async def reject_pipeline(self, run_id: int) -> None:
+    async def reject_pipeline(self, run_id: int, *, feedback: str = "") -> None:
         run = await self._pipeline_repo.find_by_id(run_id)
         if not run:
             raise NotFoundError("파이프라인 실행을 찾을 수 없습니다")
         if run.status != PipelineStatus.PAUSED:
             raise InvalidStateError("파이프라인이 대기 상태가 아닙니다")
         run.status = PipelineStatus.CANCELLED
+        if feedback:
+            run.error_message = f"[피드백] {feedback}"
         await self._session.commit()
+
+    async def reject_and_revise(
+        self, run_id: int, *, feedback: str = ""
+    ) -> AsyncGenerator[PipelineEvent, None]:
+        run = await self._pipeline_repo.find_by_id(run_id)
+        if not run:
+            yield PipelineEvent(
+                event_type="pipeline_error",
+                stage="revise",
+                message="파이프라인 실행을 찾을 수 없습니다",
+            )
+            return
+
+        if run.status != PipelineStatus.PAUSED:
+            yield PipelineEvent(
+                event_type="pipeline_error",
+                stage="revise",
+                message="파이프라인이 대기 상태가 아닙니다",
+            )
+            return
+
+        article = await self._article_repo.find_by_id(run.article_id)
+        if not article:
+            yield PipelineEvent(
+                event_type="pipeline_error",
+                stage="revise",
+                message="아티클을 찾을 수 없습니다",
+            )
+            return
+
+        run.status = PipelineStatus.CANCELLED
+        run.error_message = f"[수정 요청] {feedback}" if feedback else "[수정 요청]"
+        await self._session.flush()
+
+        if feedback:
+            self._fm.write_text(
+                article.slug, "gate1_feedback.txt", feedback
+            )
+
+        new_run = PipelineRun(article_id=article.id)
+        new_run = await self._pipeline_repo.create(new_run)
+
+        stages: list[Stage] = [
+            OutlinerStage(self._claude, self._fm),
+            GateOneStage(),
+        ]
+        orchestrator = PipelineOrchestrator(stages)
+
+        async for event in orchestrator.execute(
+            pipeline_run=new_run,
+            topic=article.topic,
+            slug=article.slug,
+            format_id=article.format_id,
+            session=self._session,
+        ):
+            yield event
 
     async def cancel_run(self, run_id: int) -> None:
         run = await self._pipeline_repo.find_by_id(run_id)
@@ -204,6 +267,7 @@ class PipelineService:
         ):
             yield event
 
+        await self._persist_metadata(article)
         await self._save_validations(new_run.id, article.slug)
 
     async def validate_only(
@@ -271,6 +335,42 @@ class PipelineService:
                 ),
             ]
         return []
+
+    async def _persist_metadata(self, article: "Article") -> None:
+        meta = self._fm.read_json(article.slug, "meta.json")
+        if isinstance(meta, dict):
+            tags = meta.get("seo_keywords", [])
+            if isinstance(tags, list):
+                article.tags = tags[:20]
+            category = meta.get("category", "")
+            if category and not article.category:
+                article.category = category
+            title = meta.get("title", "")
+            if title and article.title == article.topic:
+                article.title = title
+
+        refs = self._fm.read_json(article.slug, "references.json")
+        if isinstance(refs, list):
+            article.reference_count = len(refs)
+
+        outline = self._fm.read_json(article.slug, "outline.json")
+        if isinstance(outline, dict):
+            sections = outline.get("sections", [])
+            if isinstance(sections, list):
+                article.section_count = len(sections)
+
+        content = self._fm.read_text(article.slug, "final.md")
+        if content:
+            article.word_count = len(content.replace(" ", "").replace("\n", ""))
+
+        images = self._fm.list_images(article.slug)
+        article.image_count = len(images)
+
+        thumb = self._fm.images_dir(article.slug) / "thumbnail.png"
+        if thumb.exists():
+            article.thumbnail_path = f"{article.slug}/images/thumbnail.png"
+
+        await self._session.flush()
 
     async def _save_validations(self, run_id: int, slug: str) -> None:
         existing = await self._validation_repo.find_by_pipeline_run(run_id)

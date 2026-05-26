@@ -923,6 +923,25 @@ table.cmp .num { font-variant-numeric: tabular-nums; font-family: var(--font-mon
 /* ===== Article Row Delete Button ===== */
 .article-row-wrap {
   position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+.article-row-tags {
+  display: flex;
+  gap: 3px;
+  padding: 0 0 4px 36px;
+  flex-wrap: wrap;
+}
+.article-tag-chip {
+  font-size: 10px;
+  color: var(--text-faint);
+  background: var(--surface2);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.article-tag-chip.more {
+  color: var(--text-muted);
 }
 .article-delete-btn {
   position: absolute; right: 8px; top: 50%; transform: translateY(-50%);

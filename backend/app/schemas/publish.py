@@ -11,6 +11,14 @@ class PublishKitDiagram(BaseModel):
     content: str
 
 
+class ReferenceItem(BaseModel):
+    url: str
+    title: str
+    summary: str
+    relevance_score: float
+    source_type: str
+
+
 class PublishKit(BaseModel):
     title: str
     category: str
@@ -19,5 +27,7 @@ class PublishKit(BaseModel):
     html: str | None
     images: list[PublishKitImage]
     diagrams: list[PublishKitDiagram]
+    references: list[ReferenceItem]
+    thumbnail_url: str | None
     word_count: int
     status: str

@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { api } from "../../api/client";
 import { useAppStore } from "../../stores/app-store";
+import { useUIStore } from "../../stores/ui-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
 import { usePipelineSSE } from "../../hooks/use-pipeline-sse";
 import { Icons } from "../common/Icons";
@@ -40,6 +41,7 @@ export function Topbar({
     setArticleContent,
   } = useAppStore();
 
+  const workspaceName = useUIStore((s) => s.userProfile.workspaceName);
   const currentRun = usePipelineStore((s) => s.currentRun);
   const pipelineError = usePipelineStore((s) => s.error);
   const { startStream } = usePipelineSSE();
@@ -142,7 +144,7 @@ export function Topbar({
         </button>
       )}
       <div className="crumbs">
-        <span className="crumb">AI의 정석</span>
+        <span className="crumb">{workspaceName}</span>
         <span className="sep">/</span>
         <span className="crumb">Drafts</span>
         <span className="sep">/</span>

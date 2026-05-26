@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import { useAppStore } from "../../stores/app-store";
+import { useUIStore } from "../../stores/ui-store";
 import { BatchEditPanel } from "./BatchEditPanel";
 
 interface ObsidianSettings {
@@ -19,7 +20,9 @@ interface GeneralSettings {
 
 export function SettingsPanel() {
   const addToast = useAppStore((s) => s.addToast);
-  const [tab, setTab] = useState<"obsidian" | "general" | "batch">("obsidian");
+  const userProfile = useUIStore((s) => s.userProfile);
+  const setUserProfile = useUIStore((s) => s.setUserProfile);
+  const [tab, setTab] = useState<"profile" | "obsidian" | "general" | "batch">("profile");
   const [obsidian, setObsidian] = useState<ObsidianSettings | null>(null);
   const [general, setGeneral] = useState<GeneralSettings | null>(null);
   const [saving, setSaving] = useState(false);
@@ -71,6 +74,12 @@ export function SettingsPanel() {
     <div className="settings-panel">
       <div className="settings-tabs">
         <button
+          className={`settings-tab ${tab === "profile" ? "active" : ""}`}
+          onClick={() => setTab("profile")}
+        >
+          프로필
+        </button>
+        <button
           className={`settings-tab ${tab === "obsidian" ? "active" : ""}`}
           onClick={() => setTab("obsidian")}
         >
@@ -89,6 +98,53 @@ export function SettingsPanel() {
           일괄 편집
         </button>
       </div>
+
+      {tab === "profile" && (
+        <div className="settings-form">
+          <div className="settings-group">
+            <label className="settings-label">표시 이름</label>
+            <input
+              className="settings-input"
+              type="text"
+              value={userProfile.displayName}
+              onChange={(e) => setUserProfile({ displayName: e.target.value })}
+              placeholder="Jaylen H."
+            />
+          </div>
+          <div className="settings-group">
+            <label className="settings-label">블로그 URL</label>
+            <input
+              className="settings-input"
+              type="text"
+              value={userProfile.blogUrl}
+              onChange={(e) => setUserProfile({ blogUrl: e.target.value })}
+              placeholder="jaylenhan.tistory.com"
+            />
+          </div>
+          <div className="settings-group">
+            <label className="settings-label">워크스페이스 이름</label>
+            <input
+              className="settings-input"
+              type="text"
+              value={userProfile.workspaceName}
+              onChange={(e) => setUserProfile({ workspaceName: e.target.value })}
+              placeholder="AI의 정석"
+            />
+          </div>
+          <div className="settings-group">
+            <label className="settings-label">아바타 이니셜</label>
+            <input
+              className="settings-input"
+              type="text"
+              value={userProfile.avatarInitials}
+              onChange={(e) => setUserProfile({ avatarInitials: e.target.value.slice(0, 4) })}
+              placeholder="JH"
+              maxLength={4}
+            />
+            <span className="settings-hint">사이드바 하단에 표시되는 이니셜 (최대 4자)</span>
+          </div>
+        </div>
+      )}
 
       {tab === "obsidian" && obsidian && (
         <div className="settings-form">

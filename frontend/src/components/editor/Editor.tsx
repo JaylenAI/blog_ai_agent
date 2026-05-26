@@ -188,14 +188,14 @@ export function Editor({ article }: EditorProps) {
           <div className="meta-cell">
             <div className="k">참고자료</div>
             <div className="v">
-              {article.reference_count ?? 0}
+              {article.reference_count || 0}
               <span className="unit"> / 8~15</span>
             </div>
           </div>
           <div className="meta-cell">
             <div className="k">대섹션</div>
             <div className="v">
-              {article.section_count ?? outline.length ?? 0}
+              {article.section_count || outline.length || 0}
               <span className="unit"> / 7~9</span>
             </div>
           </div>

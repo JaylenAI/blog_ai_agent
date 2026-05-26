@@ -15,6 +15,12 @@ beforeEach(() => {
       publishKitOpen: false,
       editorMode: "view",
       editDraft: null,
+      userProfile: {
+        displayName: "Jaylen H.",
+        blogUrl: "jaylenhan.tistory.com",
+        workspaceName: "AI의 정석",
+        avatarInitials: "JH",
+      },
     });
   });
 });
@@ -109,5 +115,37 @@ describe("useUIStore", () => {
     expect(useUIStore.getState().editDraft).toBe("새 초안");
     act(() => useUIStore.getState().setEditDraft(null));
     expect(useUIStore.getState().editDraft).toBeNull();
+  });
+
+  it("initial userProfile has correct defaults", () => {
+    const { userProfile } = useUIStore.getState();
+    expect(userProfile.displayName).toBe("Jaylen H.");
+    expect(userProfile.blogUrl).toBe("jaylenhan.tistory.com");
+    expect(userProfile.workspaceName).toBe("AI의 정석");
+    expect(userProfile.avatarInitials).toBe("JH");
+  });
+
+  it("setUserProfile partial update preserves other fields", () => {
+    act(() => useUIStore.getState().setUserProfile({ displayName: "New Name" }));
+    const { userProfile } = useUIStore.getState();
+    expect(userProfile.displayName).toBe("New Name");
+    expect(userProfile.blogUrl).toBe("jaylenhan.tistory.com");
+    expect(userProfile.workspaceName).toBe("AI의 정석");
+    expect(userProfile.avatarInitials).toBe("JH");
+  });
+
+  it("setUserProfile updates multiple fields at once", () => {
+    act(() =>
+      useUIStore.getState().setUserProfile({
+        displayName: "Alice K.",
+        blogUrl: "alice.blog.com",
+        avatarInitials: "AK",
+      }),
+    );
+    const { userProfile } = useUIStore.getState();
+    expect(userProfile.displayName).toBe("Alice K.");
+    expect(userProfile.blogUrl).toBe("alice.blog.com");
+    expect(userProfile.avatarInitials).toBe("AK");
+    expect(userProfile.workspaceName).toBe("AI의 정석");
   });
 });

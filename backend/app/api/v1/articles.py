@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse, Response
 
 from app.dependencies import get_article_service, get_file_manager
+from app.formats import get_format_registry
 from app.schemas.article import (
     ArticleCreate,
     ArticleListResponse,
@@ -11,7 +12,7 @@ from app.schemas.article import (
     ArticleUpdate,
 )
 from app.schemas.common import ApiResponse
-from app.schemas.publish import PublishKit, PublishKitDiagram, PublishKitImage
+from app.schemas.publish import PublishKit, PublishKitDiagram, PublishKitImage, ReferenceItem
 from app.services.article_service import ArticleService
 from app.utils.file_manager import FileManager
 
@@ -23,6 +24,14 @@ async def create_article(
     data: ArticleCreate,
     service: ArticleService = Depends(get_article_service),
 ) -> ApiResponse[ArticleResponse]:
+    if data.format_id:
+        registry = get_format_registry()
+        if data.format_id not in registry.format_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown format_id: {data.format_id}. "
+                f"Available: {', '.join(sorted(registry.format_ids))}",
+            )
     article = await service.create(data)
     return ApiResponse(
         success=True,
@@ -130,6 +139,32 @@ async def get_article_html(
 
 
 
+@router.get("/{article_id}/references")
+async def get_article_references(
+    article_id: int,
+    service: ArticleService = Depends(get_article_service),
+    fm: FileManager = Depends(get_file_manager),
+) -> ApiResponse[list[ReferenceItem]]:
+    article = await service.get_by_id(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    refs_data = fm.read_json(article.slug, "references.json")
+    if not isinstance(refs_data, list):
+        return ApiResponse(success=True, data=[])
+    references = [
+        ReferenceItem(
+            url=r.get("url", ""),
+            title=r.get("title", ""),
+            summary=r.get("summary", ""),
+            relevance_score=float(r.get("relevance_score", 0)),
+            source_type=r.get("source_type", ""),
+        )
+        for r in refs_data
+        if isinstance(r, dict) and r.get("url")
+    ]
+    return ApiResponse(success=True, data=references)
+
+
 @router.get("/{article_id}/publish-kit")
 async def get_publish_kit(
     article_id: int,
@@ -162,7 +197,26 @@ async def get_publish_kit(
         if content:
             diagrams.append(PublishKitDiagram(name=name, content=content))
 
+    refs_data = fm.read_json(article.slug, "references.json")
+    references: list[ReferenceItem] = []
+    if isinstance(refs_data, list):
+        references = [
+            ReferenceItem(
+                url=r.get("url", ""),
+                title=r.get("title", ""),
+                summary=r.get("summary", ""),
+                relevance_score=float(r.get("relevance_score", 0)),
+                source_type=r.get("source_type", ""),
+            )
+            for r in refs_data
+            if isinstance(r, dict) and r.get("url")
+        ]
+
     word_count = len(markdown.replace(" ", "").replace("\n", "")) if markdown else 0
+
+    thumbnail_url: str | None = None
+    if article.thumbnail_path:
+        thumbnail_url = f"/api/v1/articles/{article_id}/images/thumbnail.png"
 
     return ApiResponse(
         success=True,
@@ -176,6 +230,8 @@ async def get_publish_kit(
             html=html,
             images=images,
             diagrams=diagrams,
+            references=references,
+            thumbnail_url=thumbnail_url,
             word_count=word_count,
             status=article.status.value,
         ),

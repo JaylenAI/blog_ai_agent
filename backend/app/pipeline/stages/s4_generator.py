@@ -3,6 +3,7 @@ from app.claude.prompts.generator import GeneratorPrompt
 from app.config import settings
 from app.formats import get_format_registry
 from app.images.image_generator import ImageGenerator
+from app.images.playwright_renderer import render_thumbnail
 from app.pipeline.base import Stage, StageInput, StageOutput
 from app.utils.file_manager import FileManager
 from app.utils.logger import get_logger
@@ -108,6 +109,23 @@ class GeneratorStage(Stage):
 
         image_count = sum(1 for r in image_results if r.get("success"))
 
+        thumbnail_path = ""
+        try:
+            thumb_output = self._fm.images_dir(stage_input.slug) / "thumbnail.png"
+            title = meta.get("title", stage_input.topic)
+            category = meta.get("category", "Tech Blog")
+            subtitle = stage_input.topic if title != stage_input.topic else ""
+            ok = await render_thumbnail(
+                thumb_output,
+                title=title,
+                category=category,
+                subtitle=subtitle,
+            )
+            if ok:
+                thumbnail_path = f"{stage_input.slug}/images/thumbnail.png"
+        except Exception as e:
+            logger.warning("썸네일 생성 실패 (본문은 유지): %s", e)
+
         logger.info(
             "Generator 완료: %d자, %d개 섹션, %d개 다이어그램, %d개 이미지",
             char_count,
@@ -125,6 +143,7 @@ class GeneratorStage(Stage):
                 "section_count": section_count,
                 "diagram_count": len(diagrams),
                 "image_count": image_count,
+                "thumbnail_path": thumbnail_path,
             },
         )
 

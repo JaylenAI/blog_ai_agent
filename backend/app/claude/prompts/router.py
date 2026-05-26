@@ -54,7 +54,7 @@ recommended_format 필드에 "{format_spec.id}"를 그대로 반환하세요.
   "category": "카테고리 (예: AI/ML, Backend, Frontend, DevOps)",
   "target_audience": "대상 독자 수준 (beginner | intermediate | advanced)",
   "search_queries": ["자료 조사용 검색 쿼리 4-6개"],
-  "seo_keywords": ["SEO 키워드 5-10개"],
+  "seo_keywords": ["SEO 키워드 정확히 10개 — 주제 핵심어 + 관련 롱테일 혼합"],
   "estimated_sections": 7,
   "recommended_format": "형식 ID (concept, tutorial, comparison, ...)"
 }}

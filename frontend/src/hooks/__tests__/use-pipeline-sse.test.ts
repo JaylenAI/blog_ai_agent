@@ -268,7 +268,8 @@ describe("usePipelineSSE", () => {
   });
 
   it("throws on non-ok response", async () => {
-    mockFetch.mockResolvedValueOnce({
+    vi.useFakeTimers();
+    mockFetch.mockResolvedValue({
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
@@ -278,14 +279,18 @@ describe("usePipelineSSE", () => {
     const { result } = renderHook(() => usePipelineSSE());
 
     await act(async () => {
-      await result.current.startStream("/test");
+      const promise = result.current.startStream("/test");
+      await vi.advanceTimersByTimeAsync(15000);
+      await promise;
     });
 
     expect(usePipelineStore.getState().error).toBeTruthy();
+    vi.useRealTimers();
   });
 
   it("sets error when response has no body", async () => {
-    mockFetch.mockResolvedValueOnce({
+    vi.useFakeTimers();
+    mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
       body: null,
@@ -294,10 +299,13 @@ describe("usePipelineSSE", () => {
     const { result } = renderHook(() => usePipelineSSE());
 
     await act(async () => {
-      await result.current.startStream("/test");
+      const promise = result.current.startStream("/test");
+      await vi.advanceTimersByTimeAsync(15000);
+      await promise;
     });
 
     expect(usePipelineStore.getState().error).toBeTruthy();
+    vi.useRealTimers();
   });
 
   it("abort cancels the stream", () => {

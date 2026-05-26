@@ -49,6 +49,12 @@ MOCK_LIBRARIAN_RESPONSE = {
             "summary": "대규모 언어 모델 개요",
             "relevance_score": 0.85,
         },
+        {
+            "url": "https://example.com/gpt-overview",
+            "title": "GPT 모델 개요",
+            "summary": "GPT 시리즈 아키텍처 비교",
+            "relevance_score": 0.80,
+        },
     ]
 }
 

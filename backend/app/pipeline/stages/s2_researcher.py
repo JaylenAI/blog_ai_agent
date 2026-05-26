@@ -65,11 +65,11 @@ class ResearcherStage(Stage):
         ]
         self._fm.write_json(stage_input.slug, "references.json", refs_data)
 
-        if not unique_refs:
+        if len(unique_refs) < 3:
             return StageOutput(
                 stage_name=self.name,
                 success=False,
-                error="참고자료를 찾지 못했습니다",
+                error=f"참고자료가 {len(unique_refs)}건으로 최소 기준(3건) 미달",
             )
 
         by_source = {

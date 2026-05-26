@@ -9,9 +9,10 @@ export interface Article {
   content_path: string | null;
   word_count: number;
   image_count: number;
-  tags?: string[];
-  reference_count?: number;
-  section_count?: number;
+  tags: string[];
+  reference_count: number;
+  section_count: number;
+  thumbnail_path: string;
   created_at: string;
   updated_at: string;
 }
