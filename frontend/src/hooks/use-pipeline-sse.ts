@@ -89,7 +89,6 @@ export function usePipelineSSE() {
 
       setRunning(true);
       setError(null);
-      let retried = false;
 
       try {
         const response = await fetch(`${BASE_URL}${url}`, {
@@ -146,56 +145,14 @@ export function usePipelineSSE() {
         if ((err as Error).name === "AbortError") return;
 
         const msg = err instanceof Error ? err.message : "스트리밍 오류";
-        const delays = [1500, 3000, 6000];
 
-        for (let attempt = 0; attempt < delays.length; attempt++) {
-          if (retried && attempt === 0) continue;
-          retried = true;
-          addToast({ type: "info", message: `연결이 끊겼습니다. 재연결 중... (${attempt + 1}/${delays.length})` });
-          await new Promise((r) => setTimeout(r, delays[attempt]));
-          try {
-            const retryRes = await fetch(`${BASE_URL}${url}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              signal: controller.signal,
-              ...options,
-            });
-            if (retryRes?.ok && retryRes.body) {
-              const retryReader = retryRes.body.getReader();
-              const retryDecoder = new TextDecoder();
-              let retryBuf = "";
-              while (true) {
-                const { done, value } = await retryReader.read();
-                if (done) break;
-                retryBuf += retryDecoder.decode(value, { stream: true });
-                const lines = retryBuf.split("\n");
-                retryBuf = lines.pop() ?? "";
-                for (const line of lines) {
-                  if (!line.startsWith("data:")) continue;
-                  const jsonStr = line.slice(5).trim();
-                  if (!jsonStr) continue;
-                  try {
-                    const event = JSON.parse(jsonStr) as PipelineEvent;
-                    addEvent(event);
-                    if (event.data?.run_id && callbacks?.onRunId) callbacks.onRunId(event.data.run_id as number);
-                    handleEventType(event);
-                    callbacks?.onEvent?.(event);
-                  } catch {
-                    /* malformed JSON — skip */
-                  }
-                }
-              }
-              addToast({ type: "success", message: "재연결 성공" });
-              return;
-            }
-          } catch {
-            /* retry failed, try next */
-          }
+        if (msg.includes("409")) {
+          addToast({ type: "info", message: "파이프라인이 이미 실행 중입니다" });
+        } else {
+          setError(msg);
+          setPipelineMode("idle");
+          addToast({ type: "error", message: msg });
         }
-
-        setError(msg);
-        setPipelineMode("idle");
-        addToast({ type: "error", message: msg });
       } finally {
         setRunning(false);
         abortRef.current = null;

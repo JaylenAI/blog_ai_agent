@@ -2,6 +2,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
@@ -24,6 +25,7 @@ router = APIRouter()
 _SUCCESS_EVENT_TYPES = {"pipeline_complete", "gate_pending"}
 
 _background_tasks: set[asyncio.Task] = set()
+_active_run_ids: set[int] = set()
 
 
 def _event_to_dict(event) -> dict:
@@ -254,53 +256,63 @@ async def _run_pipeline_in_background(
     queue: asyncio.Queue,
     article_id: int,
     *,
+    run_id_holder: list[int],
     auto_gate_one: bool = False,
     format_id: str | None = None,
 ) -> None:
-    async with async_session_factory() as session:
-        try:
-            service = create_pipeline_service(session)
-            async for event in service.start_pipeline(
-                article_id,
-                auto_gate_one=auto_gate_one,
-                format_id=format_id,
-            ):
-                await queue.put(_event_to_dict(event))
-            await session.commit()
-        except Exception as e:
-            await session.rollback()
-            logger.error("파이프라인 백그라운드 실행 실패: %s", e, exc_info=True)
-            await queue.put({
-                "event_type": "pipeline_error",
-                "stage": "system",
-                "message": str(e),
-                "data": {},
-            })
-        finally:
-            await queue.put(None)
+    try:
+        async with async_session_factory() as session:
+            try:
+                service = create_pipeline_service(session)
+                async for event in service.start_pipeline(
+                    article_id,
+                    auto_gate_one=auto_gate_one,
+                    format_id=format_id,
+                ):
+                    evt = _event_to_dict(event)
+                    if evt.get("data", {}).get("run_id") and not run_id_holder:
+                        run_id_holder.append(evt["data"]["run_id"])
+                        _active_run_ids.add(run_id_holder[0])
+                    await queue.put(evt)
+                await session.commit()
+            except Exception as e:
+                await session.rollback()
+                logger.error("파이프라인 백그라운드 실행 실패: %s", e, exc_info=True)
+                await queue.put({
+                    "event_type": "pipeline_error",
+                    "stage": "system",
+                    "message": str(e),
+                    "data": {},
+                })
+    finally:
+        if run_id_holder:
+            _active_run_ids.discard(run_id_holder[0])
+        await queue.put(None)
 
 
 async def _resume_pipeline_in_background(
     queue: asyncio.Queue,
     run_id: int,
 ) -> None:
-    async with async_session_factory() as session:
-        try:
-            service = create_pipeline_service(session)
-            async for event in service.resume_pipeline(run_id):
-                await queue.put(_event_to_dict(event))
-            await session.commit()
-        except Exception as e:
-            await session.rollback()
-            logger.error("파이프라인 재개 실패: %s", e, exc_info=True)
-            await queue.put({
-                "event_type": "pipeline_error",
-                "stage": "system",
-                "message": str(e),
-                "data": {},
-            })
-        finally:
-            await queue.put(None)
+    try:
+        async with async_session_factory() as session:
+            try:
+                service = create_pipeline_service(session)
+                async for event in service.resume_pipeline(run_id):
+                    await queue.put(_event_to_dict(event))
+                await session.commit()
+            except Exception as e:
+                await session.rollback()
+                logger.error("파이프라인 재개 실패: %s", e, exc_info=True)
+                await queue.put({
+                    "event_type": "pipeline_error",
+                    "stage": "system",
+                    "message": str(e),
+                    "data": {},
+                })
+    finally:
+        _active_run_ids.discard(run_id)
+        await queue.put(None)
 
 
 def _sse_from_queue(queue: asyncio.Queue) -> EventSourceResponse:
@@ -325,11 +337,13 @@ async def start_pipeline_stream(
     data: PipelineStartRequest,
 ) -> EventSourceResponse:
     queue: asyncio.Queue = asyncio.Queue()
+    run_id_holder: list[int] = []
 
     task = asyncio.create_task(
         _run_pipeline_in_background(
             queue,
             data.article_id,
+            run_id_holder=run_id_holder,
             auto_gate_one=data.auto_gate_one,
             format_id=data.format_id,
         )
@@ -377,9 +391,14 @@ async def validate_only_stream(
 
 
 @router.post("/runs/{run_id}/approve/stream")
-async def approve_gate_stream(
-    run_id: int,
-) -> EventSourceResponse:
+async def approve_gate_stream(run_id: int):
+    if run_id in _active_run_ids:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "이미 처리 중인 파이프라인입니다"},
+        )
+
+    _active_run_ids.add(run_id)
     queue: asyncio.Queue = asyncio.Queue()
 
     task = asyncio.create_task(

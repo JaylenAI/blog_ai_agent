@@ -176,7 +176,7 @@ class PipelineService:
 
         run.status = PipelineStatus.CANCELLED
         run.error_message = f"[수정 요청] {feedback}" if feedback else "[수정 요청]"
-        await self._session.flush()
+        await self._session.commit()
 
         if feedback:
             self._fm.write_text(
@@ -389,7 +389,7 @@ class PipelineService:
         if thumb.exists():
             article.thumbnail_path = f"{article.slug}/images/thumbnail.png"
 
-        await self._session.flush()
+        await self._session.commit()
 
     async def _save_validations(self, run_id: int, slug: str) -> None:
         existing = await self._validation_repo.find_by_pipeline_run(run_id)
@@ -415,4 +415,4 @@ class PipelineService:
             )
             self._session.add(validation)
 
-        await self._session.flush()
+        await self._session.commit()

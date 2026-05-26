@@ -44,7 +44,7 @@ class PipelineOrchestrator:
     ) -> AsyncGenerator[PipelineEvent, None]:
         pipeline_run.status = PipelineStatus.RUNNING
         pipeline_run.started_at = datetime.now(UTC)
-        await session.flush()
+        await session.commit()
 
         stage_input = StageInput(
             article_id=pipeline_run.article_id,
@@ -57,7 +57,7 @@ class PipelineOrchestrator:
         first = True
         for stage in self._stages:
             pipeline_run.current_stage = PipelineStage(stage.name)
-            await session.flush()
+            await session.commit()
 
             start_data: dict = {}
             if first:
@@ -85,7 +85,7 @@ class PipelineOrchestrator:
                 logger.error("Stage %s 실패: %s", stage.name, e, exc_info=True)
                 pipeline_run.status = PipelineStatus.FAILED
                 pipeline_run.error_message = str(e)
-                await session.flush()
+                await session.commit()
 
                 error_event = PipelineEvent(
                     event_type="stage_error",
@@ -108,7 +108,7 @@ class PipelineOrchestrator:
             if not output.success:
                 pipeline_run.status = PipelineStatus.FAILED
                 pipeline_run.error_message = output.error
-                await session.flush()
+                await session.commit()
 
                 yield PipelineEvent(
                     event_type="stage_error",
@@ -119,7 +119,7 @@ class PipelineOrchestrator:
 
             if output.data.get("gate_pending"):
                 pipeline_run.status = PipelineStatus.PAUSED
-                await session.flush()
+                await session.commit()
 
                 gate_event = PipelineEvent(
                     event_type="gate_pending",
@@ -154,7 +154,7 @@ class PipelineOrchestrator:
         pipeline_run.completed_at = datetime.now(UTC)
         total = (pipeline_run.completed_at - pipeline_run.started_at).total_seconds()
         pipeline_run.duration_seconds = round(total, 2)
-        await session.flush()
+        await session.commit()
 
         yield PipelineEvent(
             event_type="pipeline_complete",

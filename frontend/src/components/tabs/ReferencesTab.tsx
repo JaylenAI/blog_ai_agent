@@ -14,7 +14,7 @@ function safeHostname(url: string): string {
 }
 
 export function ReferencesTab() {
-  const selectedArticleId = useAppStore((s) => s.selectedArticleId);
+  const selectedArticleId = useAppStore((s) => s.activeArticle?.id);
   const events = usePipelineStore((s) => s.events);
   const [references, setReferences] = useState<ReferenceItem[]>([]);
   const [loading, setLoading] = useState(false);
