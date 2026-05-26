@@ -13,13 +13,21 @@ from app.formats.schema import (
 from app.pipeline.base import StageInput
 from app.pipeline.stages.s5_validator import (
     ValidatorStage,
+    _check_ai_tell_words,
+    _check_burstiness,
     _check_char_count,
+    _check_comparison_tables,
     _check_conclusion_section,
+    _check_definition_patterns,
+    _check_heading_keyword,
     _check_html_tables,
+    _check_image_alt,
     _check_intro_section,
+    _check_keyword_density,
     _check_keyword_presence,
     _check_no_faq,
     _check_no_references_section,
+    _check_quantitative_data,
     _check_readability,
     _check_section_count,
     _check_slop_can_do,
@@ -167,14 +175,14 @@ async def test_validator_handles_claude_error() -> None:
     result = await stage.execute(_make_input())
 
     assert result.success is True
-    assert result.data["summary"]["total"] == 14
+    assert result.data["summary"]["total"] == 22
 
 
 async def test_validator_combines_rule_and_claude() -> None:
     stage, _, _ = _make_stage()
     result = await stage.execute(_make_input())
 
-    assert result.data["summary"]["total"] == 16
+    assert result.data["summary"]["total"] == 24
 
 
 def test_check_char_count_pass() -> None:
@@ -288,9 +296,9 @@ def test_compute_summary_empty() -> None:
     assert summary["score"] == 0.0
 
 
-def test_run_rule_checks_returns_fourteen() -> None:
+def test_run_rule_checks_returns_twenty_two() -> None:
     results = _run_rule_checks(GOOD_CONTENT, MOCK_META, DEFAULT_SPEC)
-    assert len(results) == 14
+    assert len(results) == 22
 
 
 def test_slop_can_do_pass() -> None:
@@ -444,8 +452,8 @@ async def test_validator_oracle_failure_returns_empty() -> None:
 
     assert result.success is True
     assert result.data["oracle_used"] is True
-    # rule 14개 + claude validator 2개 = 16개 (oracle 실패로 0개 추가)
-    assert result.data["summary"]["total"] == 16
+    # rule 22개 + claude validator 2개 = 24개 (oracle 실패로 0개 추가)
+    assert result.data["summary"]["total"] == 24
     oracle_items = [
         v for v in result.data["validations"]
         if v.get("item", "").startswith("[Oracle]")
@@ -462,3 +470,121 @@ async def test_validator_no_oracle_by_default() -> None:
     assert result.success is True
     assert mock_claude.run_json.call_count == 1
     assert result.data["oracle_used"] is False
+
+
+# ──────────────────────────────────────────────
+# Phase 2: 신규 검증 항목 테스트 (SEO/AEO/GEO + AI감지)
+# ──────────────────────────────────────────────
+
+
+def test_keyword_density_pass() -> None:
+    content = "AI는 중요한 기술입니다. " * 30 + "가" * 3000
+    meta = {"seo_keywords": ["AI"]}
+    result = _check_keyword_density(content, meta)
+    assert result["passed"] is True
+    assert result["category"] == "seo"
+
+
+def test_keyword_density_too_high() -> None:
+    content = "AI " * 500
+    meta = {"seo_keywords": ["AI"]}
+    result = _check_keyword_density(content, meta)
+    assert result["passed"] is False
+
+
+def test_keyword_density_no_keywords() -> None:
+    result = _check_keyword_density("본문입니다.", {})
+    assert result["passed"] is False
+
+
+def test_heading_keyword_pass() -> None:
+    content = "## AI의 개념\n## AI 활용 사례\n## 결론"
+    meta = {"seo_keywords": ["AI"]}
+    result = _check_heading_keyword(content, meta)
+    assert result["passed"] is True
+
+
+def test_heading_keyword_fail() -> None:
+    content = "## 들어가며\n## 마치며\n## 기타"
+    meta = {"seo_keywords": ["AI", "인공지능"]}
+    result = _check_heading_keyword(content, meta)
+    assert result["passed"] is False
+
+
+def test_image_alt_pass() -> None:
+    content = "![AI 아키텍처](img.png)\n![모델 구조](model.png)"
+    result = _check_image_alt(content)
+    assert result["passed"] is True
+
+
+def test_image_alt_fail() -> None:
+    content = "![](img.png)\n![AI 구조](model.png)"
+    result = _check_image_alt(content)
+    assert result["passed"] is False
+
+
+def test_image_alt_no_images() -> None:
+    result = _check_image_alt("이미지 없는 본문입니다.")
+    assert result["passed"] is True
+
+
+def test_definition_patterns_pass() -> None:
+    content = "AI란 인공지능을 의미합니다. 즉, 기계가 학습하는 것이다."
+    result = _check_definition_patterns(content)
+    assert result["passed"] is True
+
+
+def test_definition_patterns_fail() -> None:
+    content = "좋은 기술이 있습니다. 사용해 봅시다."
+    result = _check_definition_patterns(content)
+    assert result["passed"] is False
+
+
+def test_comparison_tables_pass() -> None:
+    content = "비교 분석입니다. <table><tr><td>A</td></tr></table>"
+    result = _check_comparison_tables(content)
+    assert result["passed"] is True
+
+
+def test_comparison_tables_fail() -> None:
+    content = "A vs B 비교입니다. 차이점은 명확합니다. 장단점을 살펴봅시다."
+    result = _check_comparison_tables(content)
+    assert result["passed"] is False
+
+
+def test_quantitative_data_pass() -> None:
+    content = "처리 속도 30% 향상. 메모리 2GB 사용. 응답 시간 50ms."
+    result = _check_quantitative_data(content)
+    assert result["passed"] is True
+
+
+def test_quantitative_data_fail() -> None:
+    content = "좋은 성능을 보여줍니다. 빠릅니다."
+    result = _check_quantitative_data(content)
+    assert result["passed"] is False
+
+
+def test_ai_tell_words_pass() -> None:
+    result = _check_ai_tell_words("일반적인 기술 문서입니다.")
+    assert result["passed"] is True
+
+
+def test_ai_tell_words_fail() -> None:
+    text = (
+        "살펴보겠습니다. 알아보겠습니다. 확인해 보겠습니다. "
+        "다루어 보겠습니다. 알아보도록 하겠습니다."
+    )
+    result = _check_ai_tell_words(text)
+    assert result["passed"] is False
+
+
+def test_burstiness_pass() -> None:
+    text = "짧다. 이것은 아주 긴 문장으로 다양한 내용을 포함하고 있습니다. 중간. 또 다른 긴 문장이 여기 있다. 끝."
+    result = _check_burstiness(text)
+    assert result["category"] == "geo"
+
+
+def test_burstiness_uniform_fail() -> None:
+    text = ". ".join(["동일길이문장" * 3] * 10) + "."
+    result = _check_burstiness(text)
+    assert result["category"] == "geo"
