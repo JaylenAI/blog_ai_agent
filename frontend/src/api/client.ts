@@ -58,13 +58,13 @@ async function request<T>(
 
   if (schema && json.data != null) {
     const result = schema.safeParse(json.data);
-    if (!result.success) {
-      if (import.meta.env.DEV) {
-        console.warn("[API] validation failed:", path, result.error.issues);
-      }
-    } else {
+    if (result.success) {
       return { ...json, data: result.data };
     }
+    if (import.meta.env.DEV) {
+      console.warn("[API] validation failed:", path, result.error.issues);
+    }
+    return { ...json, data: json.data as T };
   }
 
   return json;

@@ -167,21 +167,37 @@ def _extract_mermaid_blocks(content: str) -> list[str]:
 
 
 def _insert_image_references(content: str, image_results: list[dict]) -> str:
+    used_positions: set[int] = set()
+
     for img in image_results:
         alt = img.get("alt", img["filename"])
         ref = f"\n![{alt}](images/{img['filename']})\n"
 
         heading = img.get("insert_after_heading", "")
-        if heading and heading in content:
-            idx = content.index(heading) + len(heading)
-            next_newline = content.find("\n", idx)
-            if next_newline != -1:
-                para_end = content.find("\n\n", next_newline + 1)
-                insert_pos = para_end if para_end != -1 else next_newline
-                content = content[:insert_pos] + "\n" + ref + content[insert_pos:]
-            else:
-                content = content + ref
-        else:
+        inserted = False
+
+        if heading:
+            search_start = 0
+            while True:
+                idx = content.find(heading, search_start)
+                if idx == -1:
+                    break
+                if idx in used_positions:
+                    search_start = idx + len(heading)
+                    continue
+                used_positions.add(idx)
+                end_of_heading = idx + len(heading)
+                next_newline = content.find("\n", end_of_heading)
+                if next_newline != -1:
+                    para_end = content.find("\n\n", next_newline + 1)
+                    insert_pos = para_end if para_end != -1 else next_newline
+                    content = content[:insert_pos] + "\n" + ref + content[insert_pos:]
+                else:
+                    content = content + ref
+                inserted = True
+                break
+
+        if not inserted:
             last_heading = content.rfind("\n## ")
             if last_heading != -1:
                 para_end = content.find("\n\n", last_heading)
