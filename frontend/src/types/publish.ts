@@ -8,6 +8,14 @@ export interface PublishKitDiagram {
   content: string;
 }
 
+export interface ReferenceItem {
+  url: string;
+  title: string;
+  summary: string;
+  relevance_score: number;
+  source_type: string;
+}
+
 export interface PublishKit {
   title: string;
   category: string;
@@ -16,6 +24,8 @@ export interface PublishKit {
   html: string | null;
   images: PublishKitImage[];
   diagrams: PublishKitDiagram[];
+  references: ReferenceItem[];
+  thumbnail_url: string | null;
   word_count: number;
   status: string;
 }

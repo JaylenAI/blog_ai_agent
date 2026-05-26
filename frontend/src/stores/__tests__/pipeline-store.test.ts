@@ -110,6 +110,78 @@ describe("usePipelineStore", () => {
     expect(usePipelineStore.getState().events[0].stage).toBe("outliner");
   });
 
+  it("addEvent dedup skips identical consecutive events", () => {
+    const event = {
+      event_type: "stage_start" as const,
+      stage: "researcher",
+      message: "test",
+      data: {},
+    };
+    usePipelineStore.getState().addEvent(event);
+    usePipelineStore.getState().addEvent(event);
+    expect(usePipelineStore.getState().events).toHaveLength(1);
+  });
+
+  it("addEvent allows different events", () => {
+    const e1 = {
+      event_type: "stage_start" as const,
+      stage: "researcher",
+      message: "test",
+      data: {},
+    };
+    const e2DifferentType = {
+      event_type: "stage_complete" as const,
+      stage: "researcher",
+      message: "test",
+      data: {},
+    };
+    const e3DifferentStage = {
+      event_type: "stage_start" as const,
+      stage: "outliner",
+      message: "test",
+      data: {},
+    };
+    const e4DifferentMessage = {
+      event_type: "stage_start" as const,
+      stage: "researcher",
+      message: "different message",
+      data: {},
+    };
+
+    usePipelineStore.getState().addEvent(e1);
+    usePipelineStore.getState().addEvent(e2DifferentType);
+    expect(usePipelineStore.getState().events).toHaveLength(2);
+
+    usePipelineStore.getState().addEvent(e3DifferentStage);
+    expect(usePipelineStore.getState().events).toHaveLength(3);
+
+    usePipelineStore.getState().addEvent(e4DifferentMessage);
+    expect(usePipelineStore.getState().events).toHaveLength(4);
+  });
+
+  it("addEvent allows same event after a different one (A→B→A = 3)", () => {
+    const eventA = {
+      event_type: "stage_start" as const,
+      stage: "researcher",
+      message: "test",
+      data: {},
+    };
+    const eventB = {
+      event_type: "stage_complete" as const,
+      stage: "researcher",
+      message: "done",
+      data: {},
+    };
+
+    usePipelineStore.getState().addEvent(eventA);
+    usePipelineStore.getState().addEvent(eventB);
+    usePipelineStore.getState().addEvent(eventA);
+    expect(usePipelineStore.getState().events).toHaveLength(3);
+    expect(usePipelineStore.getState().events[0]).toEqual(eventA);
+    expect(usePipelineStore.getState().events[1]).toEqual(eventB);
+    expect(usePipelineStore.getState().events[2]).toEqual(eventA);
+  });
+
   it("addEvent does not mutate previous reference", () => {
     const e1 = {
       event_type: "stage_start",

@@ -33,6 +33,9 @@ class OutlinerStage(Stage):
             for r in refs_data
         )
 
+        feedback = self._fm.read_text(stage_input.slug, "gate1_feedback.txt")
+        prev_outline = self._fm.read_json(stage_input.slug, "outline.json")
+
         try:
             result = await self._claude.run_json(
                 self._prompt.render(
@@ -42,6 +45,8 @@ class OutlinerStage(Stage):
                     target_audience=meta.get("target_audience", "intermediate"),
                     references=refs_text or "참고자료 없음",
                     format_spec=format_spec,
+                    feedback=feedback,
+                    previous_outline=prev_outline,
                 )
             )
         except (RuntimeError, ValueError) as e:

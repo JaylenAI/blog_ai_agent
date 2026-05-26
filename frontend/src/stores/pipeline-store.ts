@@ -47,7 +47,19 @@ export const usePipelineStore = create<PipelineState>((set) => ({
   ...INITIAL,
 
   setCurrentRun: (run) => set({ currentRun: run }),
-  addEvent: (event) => set((s) => ({ events: [...s.events, event] })),
+  addEvent: (event) =>
+    set((s) => {
+      const last = s.events[s.events.length - 1];
+      if (
+        last &&
+        last.event_type === event.event_type &&
+        last.stage === event.stage &&
+        last.message === event.message
+      ) {
+        return s;
+      }
+      return { events: [...s.events, event] };
+    }),
   setEvents: (events) => set({ events }),
   setValidations: (items, summary) =>
     set({ validations: items, validationSummary: summary }),

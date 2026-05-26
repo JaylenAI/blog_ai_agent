@@ -8,6 +8,7 @@ import type {
 } from "../types/pipeline";
 import type {
   PublishKit,
+  ReferenceItem,
   ObsidianSettings,
   GeneralSettings,
   BatchUpdateRequest,
@@ -22,6 +23,7 @@ import {
   BlogFormatSchema,
   FormatSuggestionSchema,
   PublishKitSchema,
+  ReferenceItemSchema,
   ObsidianSettingsSchema,
   GeneralSettingsSchema,
 } from "./schemas";
@@ -121,11 +123,13 @@ export const api = {
         `/articles/${id}/versions/${versionId}/restore`,
         { method: "POST" },
       ),
-    update: (id: number, data: { title?: string; category?: string; status?: string }) =>
+    update: (id: number, data: { title?: string; category?: string; status?: string; tags?: string[] }) =>
       request<Article>(`/articles/${id}`, {
         method: "PATCH",
         body: JSON.stringify(data),
       }, ArticleSchema),
+    getReferences: (id: number) =>
+      request<ReferenceItem[]>(`/articles/${id}/references`, {}, ReferenceItemSchema.array()),
   },
 
   publishKit: {

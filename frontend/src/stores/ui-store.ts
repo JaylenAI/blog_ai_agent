@@ -4,6 +4,13 @@ import type { SidebarPanel, EditorMode } from "./app-store";
 type Theme = "light" | "dark";
 type Density = "compact" | "default" | "spacious";
 
+export interface UserProfile {
+  displayName: string;
+  blogUrl: string;
+  workspaceName: string;
+  avatarInitials: string;
+}
+
 interface UIState {
   sidebarOpen: boolean;
   rightPanelOpen: boolean;
@@ -15,6 +22,7 @@ interface UIState {
   publishKitOpen: boolean;
   editorMode: EditorMode;
   editDraft: string | null;
+  userProfile: UserProfile;
 
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
@@ -26,6 +34,7 @@ interface UIState {
   setPublishKitOpen: (open: boolean) => void;
   setEditorMode: (mode: EditorMode) => void;
   setEditDraft: (draft: string | null) => void;
+  setUserProfile: (profile: Partial<UserProfile>) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -39,6 +48,12 @@ export const useUIStore = create<UIState>((set) => ({
   publishKitOpen: false,
   editorMode: "view" as EditorMode,
   editDraft: null as string | null,
+  userProfile: {
+    displayName: "Jaylen H.",
+    blogUrl: "jaylenhan.tistory.com",
+    workspaceName: "AI의 정석",
+    avatarInitials: "JH",
+  },
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
@@ -51,4 +66,6 @@ export const useUIStore = create<UIState>((set) => ({
   setPublishKitOpen: (open) => set({ publishKitOpen: open }),
   setEditorMode: (mode) => set({ editorMode: mode, editDraft: mode === "view" ? null : undefined }),
   setEditDraft: (draft) => set({ editDraft: draft }),
+  setUserProfile: (profile) =>
+    set((s) => ({ userProfile: { ...s.userProfile, ...profile } })),
 }));

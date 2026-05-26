@@ -5,7 +5,7 @@ tags:
   - keyword/LLM
   - keyword/대규모 언어 모델
   - keyword/GPT
-date: 2026-05-23
+date: 2026-05-26
 title: "LLM이란 무엇인가"
 status: published
 ---

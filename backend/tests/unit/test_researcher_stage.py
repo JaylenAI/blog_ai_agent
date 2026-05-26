@@ -104,7 +104,11 @@ async def test_researcher_success_with_all_librarians() -> None:
 async def test_researcher_handles_librarian_exception() -> None:
     stage, _, mock_fm = _make_stage()
 
-    good_refs = [_make_ref("https://official.com/1", "공식1", "official")]
+    good_refs = [
+        _make_ref("https://official.com/1", "공식1", "official"),
+        _make_ref("https://official.com/2", "공식2", "official"),
+        _make_ref("https://official.com/3", "공식3", "official"),
+    ]
 
     with patch.object(stage, "_librarians") as mock_libs:
         mock_lib_ok = AsyncMock()
@@ -122,7 +126,7 @@ async def test_researcher_handles_librarian_exception() -> None:
         result = await stage.execute(_make_input())
 
     assert result.success is True
-    assert result.data["total_count"] == 1
+    assert result.data["total_count"] == 3
 
 
 async def test_researcher_all_librarians_fail() -> None:
@@ -144,7 +148,7 @@ async def test_researcher_all_librarians_fail() -> None:
         result = await stage.execute(_make_input())
 
     assert result.success is False
-    assert "참고자료를 찾지 못했습니다" in result.error
+    assert "최소 기준" in result.error
     mock_fm.write_json.assert_called_once()
 
 
@@ -155,6 +159,7 @@ async def test_researcher_deduplicates_by_url() -> None:
         _make_ref("https://same-url.com", "제목1", "official"),
         _make_ref("https://same-url.com", "제목2", "github"),
         _make_ref("https://unique.com", "제목3", "blog_en"),
+        _make_ref("https://unique2.com", "제목4", "blog_kr"),
     ]
 
     with patch.object(stage, "_librarians") as mock_libs:
@@ -172,7 +177,7 @@ async def test_researcher_deduplicates_by_url() -> None:
 
         result = await stage.execute(_make_input())
 
-    assert result.data["total_count"] == 2
+    assert result.data["total_count"] == 3
 
 
 async def test_researcher_sorts_by_relevance_desc() -> None:
@@ -234,7 +239,11 @@ async def test_researcher_saves_references_json() -> None:
 async def test_researcher_output_structure() -> None:
     stage, _, _ = _make_stage()
 
-    refs = [_make_ref("https://a.com", "자료", "official")]
+    refs = [
+        _make_ref("https://a.com", "자료1", "official"),
+        _make_ref("https://b.com", "자료2", "official"),
+        _make_ref("https://c.com", "자료3", "github"),
+    ]
 
     with patch.object(stage, "_librarians") as mock_libs:
         mock_lib = AsyncMock()

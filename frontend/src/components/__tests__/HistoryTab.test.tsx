@@ -15,6 +15,10 @@ const mockArticle: Article = {
   content_path: null,
   word_count: 0,
   image_count: 0,
+  tags: [],
+  reference_count: 0,
+  section_count: 0,
+  thumbnail_path: "",
   created_at: "2026-01-01T00:00:00",
   updated_at: "2026-01-01T00:00:00",
 };

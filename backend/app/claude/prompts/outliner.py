@@ -12,6 +12,8 @@ class OutlinerPrompt(PromptTemplate):
     def render(self, **kwargs: str) -> str:
         format_spec: FormatSpec | None = kwargs.get("format_spec")
         format_block = self._format_block(format_spec)
+        feedback: str | None = kwargs.get("feedback")
+        previous_outline = kwargs.get("previous_outline")
 
         sc = format_spec.structure.section_count if format_spec else None
         section_min = sc.min if sc else 7
@@ -21,11 +23,27 @@ class OutlinerPrompt(PromptTemplate):
         char_min = cc.standard[0] if cc else 6000
         char_max = cc.standard[1] if cc else 8000
 
+        revision_block = ""
+        if feedback and previous_outline:
+            import json
+            prev_json = json.dumps(previous_outline, ensure_ascii=False, indent=2)
+            revision_block = f"""
+[REVISION REQUEST]
+이전 아웃라인에 대해 사용자가 수정을 요청했습니다. 피드백을 반영하여 아웃라인을 개선하세요.
+
+사용자 피드백: {feedback}
+
+이전 아웃라인:
+{prev_json}
+"""
+
         return f"""[CONTEXT]
 당신은 기술 블로그 자동화 시스템의 Outliner 에이전트입니다.
 주어진 주제와 참고자료를 바탕으로 블로그 글의 상세 아웃라인을 생성합니다.
 
 {format_block}
+
+{revision_block}
 
 [RULES]
 - 섹션 수: {section_min}~{section_max}개

@@ -17,6 +17,11 @@ class ArticleUpdate(BaseModel):
     category: str | None = Field(default=None, max_length=100)
     status: ArticleStatus | None = None
     word_count: int | None = None
+    image_count: int | None = None
+    tags: list[str] | None = None
+    reference_count: int | None = None
+    section_count: int | None = None
+    thumbnail_path: str | None = None
 
 
 class ArticleResponse(BaseModel):
@@ -32,6 +37,10 @@ class ArticleResponse(BaseModel):
     content_path: str
     word_count: int
     image_count: int
+    tags: list[str]
+    reference_count: int
+    section_count: int
+    thumbnail_path: str
     created_at: datetime
     updated_at: datetime
 

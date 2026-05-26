@@ -1,4 +1,8 @@
+import { useEffect, useState } from "react";
+import { useAppStore } from "../../stores/app-store";
 import { usePipelineStore } from "../../stores/pipeline-store";
+import { api } from "../../api/client";
+import type { ReferenceItem } from "../../types/publish";
 import { Icons } from "../common/Icons";
 
 function safeHostname(url: string): string {
@@ -10,19 +14,44 @@ function safeHostname(url: string): string {
 }
 
 export function ReferencesTab() {
+  const selectedArticleId = useAppStore((s) => s.selectedArticleId);
   const events = usePipelineStore((s) => s.events);
+  const [references, setReferences] = useState<ReferenceItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const researchEvent = events.find(
-    (e) =>
-      e.event_type === "stage_complete" && e.stage === "researcher",
-  );
-  const references = (researchEvent?.data?.references ?? []) as Array<{
-    url: string;
-    title: string;
-    summary: string;
-    relevance_score: number;
-    source_type: string;
-  }>;
+  const sseReferences = (() => {
+    const researchEvent = events.find(
+      (e) => e.event_type === "stage_complete" && e.stage === "researcher",
+    );
+    return (researchEvent?.data?.references ?? []) as ReferenceItem[];
+  })();
+
+  useEffect(() => {
+    if (sseReferences.length > 0) {
+      setReferences(sseReferences);
+      return;
+    }
+    if (!selectedArticleId) return;
+
+    let cancelled = false;
+    setLoading(true);
+    api.articles
+      .getReferences(selectedArticleId)
+      .then((res) => {
+        if (!cancelled && res.data) setReferences(res.data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedArticleId, sseReferences.length]);
+
+  if (loading) {
+    return <div className="empty">자료 로딩 중...</div>;
+  }
 
   if (references.length === 0) {
     return (

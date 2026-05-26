@@ -13,10 +13,12 @@ interface GateModalProps {
 }
 
 export function GateModal({ gate, runId, onClose }: GateModalProps) {
-  const { approveGate, rejectGate } = usePipelineActions();
+  const { approveGate, rejectGate, rejectAndRevise } = usePipelineActions();
   const isRunning = usePipelineStore((s) => s.isRunning);
   const closeGateModal = useAppStore((s) => s.closeGateModal);
   const [checklistComplete, setChecklistComplete] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const isGate1 = gate === "gate_one";
   const approveDisabled = isRunning || (!isGate1 && !checklistComplete);
@@ -26,8 +28,12 @@ export function GateModal({ gate, runId, onClose }: GateModalProps) {
   }, [approveGate, runId]);
 
   const handleReject = useCallback(async () => {
-    await rejectGate(runId);
-  }, [rejectGate, runId]);
+    if (isGate1 && feedback.trim()) {
+      await rejectAndRevise(runId, feedback.trim());
+    } else {
+      await rejectGate(runId);
+    }
+  }, [isGate1, feedback, rejectGate, rejectAndRevise, runId]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -64,21 +70,56 @@ export function GateModal({ gate, runId, onClose }: GateModalProps) {
           )}
         </div>
 
+        {isGate1 && showFeedback && (
+          <div style={{ padding: "0 24px 12px" }}>
+            <textarea
+              className="gate-feedback-input"
+              placeholder="예: 3번 섹션을 '기존 RAG와의 차이'로 바꿔줘"
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              rows={3}
+              style={{
+                width: "100%",
+                resize: "vertical",
+                background: "var(--bg-sub)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius)",
+                padding: "10px 12px",
+                fontSize: 13,
+                color: "var(--text)",
+                fontFamily: "inherit",
+              }}
+            />
+          </div>
+        )}
+
         <div className="modal-foot">
           <span className="filler">
             {isGate1
-              ? "Gate 1은 --auto 플래그로 건너뛸 수 있지만 기본은 사람이 검수"
+              ? showFeedback
+                ? "피드백을 입력하면 아웃라인을 다시 생성합니다"
+                : "Gate 1은 --auto 플래그로 건너뛸 수 있지만 기본은 사람이 검수"
               : checklistComplete
                 ? "Gate 2는 절대 자동화 불가 — 사람만 결정"
                 : "모든 체크리스트 항목을 확인해야 발행할 수 있습니다"}
           </span>
-          <button
-            className="btn ghost"
-            onClick={handleReject}
-            disabled={isRunning}
-          >
-            수정 요청
-          </button>
+          {isGate1 && !showFeedback ? (
+            <button
+              className="btn ghost"
+              onClick={() => setShowFeedback(true)}
+              disabled={isRunning}
+            >
+              수정 요청
+            </button>
+          ) : (
+            <button
+              className="btn ghost"
+              onClick={handleReject}
+              disabled={isRunning}
+            >
+              {isGate1 && feedback.trim() ? "피드백 반영 재생성" : "수정 요청"}
+            </button>
+          )}
           <button
             className="btn subtle"
             onClick={onClose}
@@ -195,7 +236,7 @@ function Gate2Body({
 
       <HighlightSection />
       <ContentPreview runId={runId} />
-      <PrePublishChecklist onAllChecked={onChecklistChange} />
+      <PrePublishChecklist runId={runId} onAllChecked={onChecklistChange} />
     </>
   );
 }
@@ -234,14 +275,30 @@ const CHECKLIST_ITEMS = [
   "내부 링크 2개 이상 삽입",
 ] as const;
 
-function PrePublishChecklist({ onAllChecked }: { onAllChecked: (allChecked: boolean) => void }) {
-  const [checked, setChecked] = useState<Record<number, boolean>>({});
+function PrePublishChecklist({ runId, onAllChecked }: { runId: number; onAllChecked: (allChecked: boolean) => void }) {
+  const storageKey = `gate2-checklist-${runId}`;
+
+  const [checked, setChecked] = useState<Record<number, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, boolean>;
+        const restored: Record<number, boolean> = {};
+        for (const [k, v] of Object.entries(parsed)) restored[Number(k)] = v;
+        const count = Object.values(restored).filter(Boolean).length;
+        if (count === CHECKLIST_ITEMS.length) onAllChecked(true);
+        return restored;
+      }
+    } catch { /* ignore parse errors */ }
+    return {};
+  });
 
   const toggle = (index: number) => {
     setChecked((prev) => {
       const next = { ...prev, [index]: !prev[index] };
       const count = Object.values(next).filter(Boolean).length;
       onAllChecked(count === CHECKLIST_ITEMS.length);
+      try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* quota */ }
       return next;
     });
   };

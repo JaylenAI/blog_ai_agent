@@ -3,10 +3,13 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { GateModal } from "../gate/GateModal";
 import { usePipelineStore } from "../../stores/pipeline-store";
 
+const mockRejectAndRevise = vi.fn().mockResolvedValue(undefined);
+
 vi.mock("../../hooks/use-pipeline-actions", () => ({
   usePipelineActions: () => ({
     approveGate: mockApprove,
     rejectGate: mockReject,
+    rejectAndRevise: mockRejectAndRevise,
     fetchValidations: vi.fn().mockResolvedValue(undefined),
   }),
 }));
@@ -76,6 +79,7 @@ describe("GateModal", () => {
   it("calls rejectGate when reject button clicked", async () => {
     render(<GateModal gate="gate_one" runId={3} onClose={mockOnClose} />);
     fireEvent.click(screen.getByText("수정 요청"));
+    fireEvent.click(screen.getByText("수정 요청"));
     expect(mockReject).toHaveBeenCalledWith(3);
   });
 
@@ -142,5 +146,67 @@ describe("GateModal", () => {
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(dialog).toHaveAttribute("aria-labelledby", "gate-modal-title");
+  });
+
+  it("gate 2 checklist persists to localStorage", () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    render(<GateModal gate="gate_two" runId={42} onClose={mockOnClose} />);
+
+    fireEvent.click(screen.getByText("카테고리 태그 10개 확인"));
+
+    expect(setItemSpy).toHaveBeenCalledWith(
+      "gate2-checklist-42",
+      expect.any(String),
+    );
+
+    const savedValue = JSON.parse(
+      setItemSpy.mock.calls.find(
+        (call) => call[0] === "gate2-checklist-42",
+      )![1],
+    );
+    expect(savedValue[0]).toBe(true);
+
+    setItemSpy.mockRestore();
+  });
+
+  it("gate 2 checklist restores from localStorage", () => {
+    const stored: Record<number, boolean> = {
+      0: true,
+      1: true,
+      2: true,
+      3: true,
+      4: true,
+      5: true,
+    };
+    const getItemSpy = vi.spyOn(Storage.prototype, "getItem").mockImplementation(
+      (key: string) => {
+        if (key === "gate2-checklist-99") return JSON.stringify(stored);
+        return null;
+      },
+    );
+
+    render(<GateModal gate="gate_two" runId={99} onClose={mockOnClose} />);
+
+    const checklistItems = [
+      "카테고리 태그 10개 확인",
+      "JSON-LD TechArticle + HowTo schema 삽입",
+      "이미지 alt 태그 부여",
+      "마치며 3단 서사 구조 확인",
+      "OG:image 메타 확인",
+      "내부 링크 2개 이상 삽입",
+    ];
+
+    for (const item of checklistItems) {
+      const el = screen.getByText(item);
+      expect(el.closest("div")).toHaveStyle("text-decoration: line-through");
+    }
+
+    const approveBtn = screen
+      .getByText("Tistory에 발행 준비")
+      .closest("button")!;
+    expect(approveBtn).not.toBeDisabled();
+
+    getItemSpy.mockRestore();
   });
 });

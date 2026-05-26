@@ -26,7 +26,19 @@ MOCK_LIBRARIAN_RESPONSE = {
             "title": "AI 공식 문서",
             "summary": "AI 핵심 개념 요약",
             "relevance_score": 0.9,
-        }
+        },
+        {
+            "url": "https://example.com/doc2",
+            "title": "딥러닝 가이드",
+            "summary": "딥러닝 기초 설명",
+            "relevance_score": 0.85,
+        },
+        {
+            "url": "https://example.com/doc3",
+            "title": "트랜스포머 아키텍처",
+            "summary": "어텐션 메커니즘 해설",
+            "relevance_score": 0.80,
+        },
     ]
 }
 
@@ -426,7 +438,7 @@ async def test_reject_gate_success(client: AsyncClient) -> None:
     body = response.json()
     assert body["success"] is True
     assert body["data"]["status"] == "cancelled"
-    mock_service.reject_pipeline.assert_called_once_with(1)
+    mock_service.reject_pipeline.assert_called_once_with(1, feedback="")
 
 
 async def test_reject_gate_invalid_state(client: AsyncClient) -> None:

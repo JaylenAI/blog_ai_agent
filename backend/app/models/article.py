@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, String
+from sqlalchemy import Enum, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -39,6 +39,10 @@ class Article(TimestampMixin, Base):
     content_path: Mapped[str] = mapped_column(String(500), default="")
     word_count: Mapped[int] = mapped_column(default=0)
     image_count: Mapped[int] = mapped_column(default=0)
+    tags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    reference_count: Mapped[int] = mapped_column(default=0)
+    section_count: Mapped[int] = mapped_column(default=0)
+    thumbnail_path: Mapped[str] = mapped_column(String(500), default="")
 
     pipeline_runs: Mapped[list[PipelineRun]] = relationship(
         back_populates="article",

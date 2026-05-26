@@ -81,13 +81,52 @@ async def approve_gate(
     return _collect_result(events)
 
 
+class RejectRequest(BaseModel):
+    feedback: str = ""
+
+
 @router.post("/runs/{run_id}/reject")
 async def reject_gate(
     run_id: int,
+    body: RejectRequest | None = None,
     service: PipelineService = Depends(get_pipeline_service),
 ) -> ApiResponse[dict]:
-    await service.reject_pipeline(run_id)
+    feedback = body.feedback if body else ""
+    await service.reject_pipeline(run_id, feedback=feedback)
     return ApiResponse(success=True, data={"status": "cancelled"})
+
+
+@router.post("/runs/{run_id}/reject-and-revise/stream")
+async def reject_and_revise_stream(
+    run_id: int,
+    body: RejectRequest | None = None,
+) -> EventSourceResponse:
+    feedback = body.feedback if body else ""
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def _revise_bg(q: asyncio.Queue, rid: int, fb: str) -> None:
+        async with async_session_factory() as session:
+            try:
+                svc = create_pipeline_service(session)
+                async for event in svc.reject_and_revise(rid, feedback=fb):
+                    await q.put(_event_to_dict(event))
+                await session.commit()
+            except Exception as e:
+                await session.rollback()
+                logger.error("아웃라인 수정 재실행 실패: %s", e, exc_info=True)
+                await q.put({
+                    "event_type": "pipeline_error",
+                    "stage": "system",
+                    "message": str(e),
+                    "data": {},
+                })
+            finally:
+                await q.put(None)
+
+    task = asyncio.create_task(_revise_bg(queue, run_id, feedback))
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return _sse_from_queue(queue)
 
 
 @router.post("/runs/{run_id}/cancel")

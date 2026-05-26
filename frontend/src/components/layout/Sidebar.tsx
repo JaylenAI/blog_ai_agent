@@ -11,6 +11,7 @@ import type { Article } from "../../types/article";
 
 export function Sidebar({ className = "" }: { className?: string }) {
   const { articles, activeArticle, setActiveArticle, setSidebarPanel, setArticles, addToast } = useAppStore();
+  const userProfile = useUIStore((s) => s.userProfile);
   const events = usePipelineStore((s) => s.events);
   const [openDrafts, setOpenDrafts] = useState(true);
   const [openPub, setOpenPub] = useState(false);
@@ -44,7 +45,8 @@ export function Sidebar({ className = "" }: { className?: string }) {
         const q = searchQuery.toLowerCase();
         return (
           a.topic.toLowerCase().includes(q) ||
-          (a.title ?? "").toLowerCase().includes(q)
+          (a.title ?? "").toLowerCase().includes(q) ||
+          a.tags.some((t) => t.toLowerCase().includes(q))
         );
       })
     : articles;
@@ -130,7 +132,7 @@ export function Sidebar({ className = "" }: { className?: string }) {
           <div className="sb-section-title">Workspaces</div>
           <SbRow
             icon={<Icons.Folder />}
-            label="AI의 정석 · jaylenhan"
+            label={`${userProfile.workspaceName} · ${userProfile.displayName}`}
             chev
             openChev
           />
@@ -219,10 +221,10 @@ export function Sidebar({ className = "" }: { className?: string }) {
       )}
 
       <div className="sb-foot">
-        <div className="avatar">JH</div>
+        <div className="avatar">{userProfile.avatarInitials}</div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div className="sb-foot-name">Jaylen H.</div>
-          <div className="sb-foot-sub">jaylenhan.tistory.com</div>
+          <div className="sb-foot-name">{userProfile.displayName}</div>
+          <div className="sb-foot-sub">{userProfile.blogUrl}</div>
         </div>
       </div>
     </aside>
@@ -294,15 +296,29 @@ function ArticleRow({
   const isGenerating =
     article.status === "generating" || article.status === "researching";
 
+  const topTags = article.tags.slice(0, 3);
+
   return (
     <div className="article-row-wrap" onClick={onClick}>
-      <SbRow
-        indent={2}
-        icon={<Icons.Doc />}
-        label={article.title ?? article.topic}
-        dot={isGenerating}
-        active={active}
-      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <SbRow
+          indent={2}
+          icon={<Icons.Doc />}
+          label={article.title ?? article.topic}
+          dot={isGenerating}
+          active={active}
+        />
+        {topTags.length > 0 && (
+          <div className="article-row-tags">
+            {topTags.map((t) => (
+              <span key={t} className="article-tag-chip">#{t}</span>
+            ))}
+            {article.tags.length > 3 && (
+              <span className="article-tag-chip more">+{article.tags.length - 3}</span>
+            )}
+          </div>
+        )}
+      </div>
       <button
         className="article-delete-btn"
         title="삭제"

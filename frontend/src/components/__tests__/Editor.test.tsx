@@ -34,11 +34,12 @@ const baseArticle: Article = {
   content_path: "",
   word_count: 5000,
   image_count: 3,
+  tags: ["AI", "RAG", "LLM"],
+  reference_count: 10,
+  section_count: 7,
+  thumbnail_path: "",
   created_at: "2026-01-01",
   updated_at: "2026-01-01",
-  tags: ["AI", "RAG", "LLM"],
-  section_count: 7,
-  reference_count: 10,
 };
 
 describe("Editor", () => {
