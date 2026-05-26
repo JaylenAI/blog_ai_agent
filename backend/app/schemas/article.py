@@ -41,6 +41,10 @@ class ArticleResponse(BaseModel):
     reference_count: int
     section_count: int
     thumbnail_path: str
+    published_at: datetime | None = None
+    published_url: str = ""
+    scheduled_at: datetime | None = None
+    extra_meta: dict = {}
     created_at: datetime
     updated_at: datetime
 

@@ -695,6 +695,9 @@ async def test_get_run_found(client: AsyncClient) -> None:
     mock_run.started_at = None
     mock_run.completed_at = None
     mock_run.error_message = ""
+    mock_run.retry_count = 0
+    mock_run.duration_seconds = None
+    mock_run.stage_durations = {}
     mock_service.get_run.return_value = mock_run
 
     client._transport.app.dependency_overrides[get_pipeline_service] = (
@@ -724,6 +727,9 @@ async def test_get_active_run_with_mock_service(client: AsyncClient) -> None:
     mock_run.started_at = None
     mock_run.completed_at = None
     mock_run.error_message = ""
+    mock_run.retry_count = 0
+    mock_run.duration_seconds = None
+    mock_run.stage_durations = {}
     mock_service.get_active_run.return_value = mock_run
 
     client._transport.app.dependency_overrides[get_pipeline_service] = (

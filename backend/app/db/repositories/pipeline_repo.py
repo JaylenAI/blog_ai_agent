@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.base import BaseRepository
@@ -50,6 +50,13 @@ class PipelineRepository(BaseRepository[PipelineRun]):
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def count_retries(self, article_id: int) -> int:
+        stmt = select(func.max(PipelineRun.retry_count)).where(
+            PipelineRun.article_id == article_id,
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() or 0
 
     async def find_latest_active(self) -> PipelineRun | None:
         stmt = (
