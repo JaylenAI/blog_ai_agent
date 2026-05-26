@@ -20,7 +20,11 @@ class OutlinerStage(Stage):
     def name(self) -> str:
         return "outliner"
 
-    async def execute(self, stage_input: StageInput) -> StageOutput:
+    async def execute(
+        self,
+        stage_input: StageInput,
+        on_progress: "ProgressCallback | None" = None,
+    ) -> StageOutput:
         meta = self._fm.read_json(stage_input.slug, "meta.json") or {}
         refs_data = self._fm.read_json(stage_input.slug, "references.json") or []
 

@@ -29,7 +29,11 @@ class ResearcherStage(Stage):
     def name(self) -> str:
         return "researcher"
 
-    async def execute(self, stage_input: StageInput) -> StageOutput:
+    async def execute(
+        self,
+        stage_input: StageInput,
+        on_progress: "ProgressCallback | None" = None,
+    ) -> StageOutput:
         queries = stage_input.data.get("search_queries", [])
         if not queries:
             return StageOutput(
@@ -65,11 +69,11 @@ class ResearcherStage(Stage):
         ]
         self._fm.write_json(stage_input.slug, "references.json", refs_data)
 
-        if len(unique_refs) < 3:
+        if len(unique_refs) < 8:
             return StageOutput(
                 stage_name=self.name,
                 success=False,
-                error=f"참고자료가 {len(unique_refs)}건으로 최소 기준(3건) 미달",
+                error=f"참고자료가 {len(unique_refs)}건으로 최소 기준(8건) 미달",
             )
 
         by_source = {

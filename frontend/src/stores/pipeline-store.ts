@@ -7,11 +7,20 @@ import type {
 } from "../types/pipeline";
 import { PIPELINE } from "../constants/ui";
 
+export interface SectionProgress {
+  totalSections: number;
+  completedSections: number;
+  currentSection: number;
+  currentHeading: string;
+  status: "writing" | "done";
+}
+
 interface PipelineState {
   currentRun: PipelineRun | null;
   events: PipelineEvent[];
   validations: ValidationItem[];
   validationSummary: ValidationSummary | null;
+  sectionProgress: SectionProgress | null;
   isRunning: boolean;
   error: string | null;
 
@@ -22,6 +31,7 @@ interface PipelineState {
     items: ValidationItem[],
     summary: ValidationSummary,
   ) => void;
+  setSectionProgress: (progress: SectionProgress | null) => void;
   setRunning: (running: boolean) => void;
   setError: (error: string | null) => void;
   reset: () => void;
@@ -33,6 +43,7 @@ const INITIAL: Pick<
   | "events"
   | "validations"
   | "validationSummary"
+  | "sectionProgress"
   | "isRunning"
   | "error"
 > = {
@@ -40,6 +51,7 @@ const INITIAL: Pick<
   events: [],
   validations: [],
   validationSummary: null,
+  sectionProgress: null,
   isRunning: false,
   error: null,
 };
@@ -65,6 +77,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
   setEvents: (events) => set({ events }),
   setValidations: (items, summary) =>
     set({ validations: items, validationSummary: summary }),
+  setSectionProgress: (progress) => set({ sectionProgress: progress }),
   setRunning: (running) => set({ isRunning: running }),
   setError: (error) => set({ error }),
   reset: () => set(INITIAL),

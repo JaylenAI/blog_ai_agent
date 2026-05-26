@@ -20,7 +20,11 @@ class RouterStage(Stage):
     def name(self) -> str:
         return "router"
 
-    async def execute(self, stage_input: StageInput) -> StageOutput:
+    async def execute(
+        self,
+        stage_input: StageInput,
+        on_progress: "ProgressCallback | None" = None,
+    ) -> StageOutput:
         registry = get_format_registry()
 
         user_selected = stage_input.format_id != "concept" or stage_input.data.get(

@@ -25,7 +25,11 @@ class ValidatorStage(Stage):
     def name(self) -> str:
         return "validator"
 
-    async def execute(self, stage_input: StageInput) -> StageOutput:
+    async def execute(
+        self,
+        stage_input: StageInput,
+        on_progress: "ProgressCallback | None" = None,
+    ) -> StageOutput:
         content = self._fm.read_text(stage_input.slug, "final.md")
         if not content:
             return StageOutput(

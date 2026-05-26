@@ -4,7 +4,7 @@ tags:
   - phase/8
 date: 2026-05-21
 created: 2026-05-21
-updated: 2026-05-23
+updated: 2026-05-26
 aliases:
   - Milestones
   - Phase 8
@@ -297,8 +297,16 @@ flowchart LR
 
 ### 다음 액션
 
-1. **v0.1.0 태깅** — main 머지 완료, 릴리스 태그 생성 예정
-2. **M7 시작** — 실제 글 3편 발행 + 성과 측정
+1. **M7 시작** — 실제 글 3편 발행 + 성과 측정
+2. **v0.1.0 태깅** — 실전 검증 후 릴리스 태그 생성
+
+### 최근 변경 (2026-05-26)
+
+- Generator 섹션별 실시간 진행률 구현 (SectionWriter 모듈, stage_progress 이벤트)
+- 이중 재시도 버그 수정 (ClaudeClient × SectionWriter → 최악 45분 → 정상화)
+- Claude CLI 프로세스 타임아웃 시 강제 종료 추가
+- Researcher WebSearch/WebFetch 도구 활성화 + 주제 적합성 프롬프트 강화
+- 백엔드 테스트 600건, 커버리지 88%
 
 ---
 

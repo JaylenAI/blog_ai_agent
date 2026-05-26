@@ -36,6 +36,7 @@ export function Editor({ article }: EditorProps) {
   const setArticleContent = useAppStore((s) => s.setArticleContent);
   const addToast = useAppStore((s) => s.addToast);
   const events = usePipelineStore((s) => s.events);
+  const sectionProgress = usePipelineStore((s) => s.sectionProgress);
   const [saving, setSaving] = useState(false);
 
   const modeLabel = MODE_LABELS[pipelineMode];
@@ -51,34 +52,16 @@ export function Editor({ article }: EditorProps) {
     (outlineEvent?.data as { outline?: OutlineSection[] } | undefined)
       ?.outline ?? [];
 
-  const completedSections = new Set(
-    events
-      .filter(
-        (e) =>
-          e.event_type === "stage_complete" &&
-          e.stage === "generator" &&
-          (e.data as { section_number?: number } | undefined)
-            ?.section_number != null,
-      )
-      .map(
-        (e) =>
-          (e.data as { section_number: number }).section_number,
-      ),
-  );
+  const completedSections = new Set<number>();
+  if (sectionProgress) {
+    for (let i = 1; i <= sectionProgress.completedSections; i++) {
+      completedSections.add(i);
+    }
+  }
 
-  const activeSectionNum = events
-    .filter(
-      (e) =>
-        e.event_type === "stage_start" &&
-        e.stage === "generator" &&
-        (e.data as { section_number?: number } | undefined)?.section_number !=
-          null,
-    )
-    .map(
-      (e) =>
-        (e.data as { section_number: number }).section_number,
-    )
-    .pop();
+  const activeSectionNum = sectionProgress?.status === "writing"
+    ? sectionProgress.currentSection
+    : undefined;
 
   const handleEdit = useCallback(() => {
     setEditDraft(articleContent ?? "");
@@ -358,10 +341,6 @@ function GenerateStageSections({
         ) {
           statusCls = "queue";
           statusText = "대기";
-        } else if (completedSections.size === 0 && !isActive) {
-          statusCls = sec.section_number <= 3 ? "" : "gen";
-          statusText =
-            sec.section_number <= 3 ? "생성 완료" : "Generator 작성 중";
         } else {
           statusCls = "queue";
           statusText = "대기";

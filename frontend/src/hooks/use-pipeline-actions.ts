@@ -13,13 +13,14 @@ export function usePipelineActions() {
 
   const approveGate = useCallback(
     async (runId: number) => {
-      closeGateModal();
-
       await startStream(
         `/pipeline/runs/${runId}/approve/stream`,
         {},
         {
           onEvent: async (event: PipelineEvent) => {
+            if (event.event_type === "stage_start") {
+              closeGateModal();
+            }
             if (
               event.event_type === "gate_pending" &&
               event.stage === "gate_two" &&

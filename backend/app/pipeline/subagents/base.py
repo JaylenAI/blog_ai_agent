@@ -40,7 +40,10 @@ class LibrarianSubagent(ABC):
         )
 
         try:
-            result = await self._claude.run_json(prompt)
+            result = await self._claude.run_json(
+                prompt,
+                allowed_tools=["WebSearch", "WebFetch"],
+            )
         except (RuntimeError, ValueError) as e:
             logger.warning("Librarian %s 실패: %s", self.name, e)
             return []

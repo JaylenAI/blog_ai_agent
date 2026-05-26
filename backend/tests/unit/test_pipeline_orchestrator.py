@@ -1,6 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock
 
-from app.pipeline.base import PipelineEvent, Stage, StageInput, StageOutput
+from app.pipeline.base import PipelineEvent, ProgressCallback, Stage, StageInput, StageOutput
 from app.pipeline.orchestrator import PipelineOrchestrator
 
 
@@ -13,7 +13,11 @@ class FakeStage(Stage):
     def name(self) -> str:
         return self._name
 
-    async def execute(self, stage_input: StageInput) -> StageOutput:
+    async def execute(
+        self,
+        stage_input: StageInput,
+        on_progress: ProgressCallback | None = None,
+    ) -> StageOutput:
         return self._output
 
 
@@ -22,7 +26,11 @@ class FailingStage(Stage):
     def name(self) -> str:
         return "router"
 
-    async def execute(self, stage_input: StageInput) -> StageOutput:
+    async def execute(
+        self,
+        stage_input: StageInput,
+        on_progress: ProgressCallback | None = None,
+    ) -> StageOutput:
         raise RuntimeError("Stage exploded")
 
 
@@ -178,7 +186,11 @@ async def test_data_flows_between_stages() -> None:
         def name(self) -> str:
             return "researcher"
 
-        async def execute(self, stage_input: StageInput) -> StageOutput:
+        async def execute(
+            self,
+            stage_input: StageInput,
+            on_progress: ProgressCallback | None = None,
+        ) -> StageOutput:
             received_data.append(stage_input.data)
             return StageOutput(stage_name="capture", success=True, data={"captured": True})
 

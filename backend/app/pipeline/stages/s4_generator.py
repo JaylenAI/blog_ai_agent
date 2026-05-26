@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 from app.claude.client import ClaudeClient
 from app.claude.prompts.generator import GeneratorPrompt
 from app.config import settings
 from app.formats import get_format_registry
 from app.images.image_generator import ImageGenerator
 from app.images.playwright_renderer import render_thumbnail
-from app.pipeline.base import Stage, StageInput, StageOutput
+from app.pipeline.base import PipelineEvent, ProgressCallback, Stage, StageInput, StageOutput
+from app.pipeline.stages.section_writer import SectionWriter
 from app.utils.file_manager import FileManager
 from app.utils.logger import get_logger
 
@@ -16,6 +19,7 @@ class GeneratorStage(Stage):
         self._claude = claude
         self._fm = file_manager
         self._prompt = GeneratorPrompt()
+        self._writer = SectionWriter(claude, self._prompt)
         self._image_gen = (
             ImageGenerator(claude, file_manager)
             if settings.image_generation_enabled
@@ -26,7 +30,11 @@ class GeneratorStage(Stage):
     def name(self) -> str:
         return "generator"
 
-    async def execute(self, stage_input: StageInput) -> StageOutput:
+    async def execute(
+        self,
+        stage_input: StageInput,
+        on_progress: ProgressCallback | None = None,
+    ) -> StageOutput:
         meta = self._fm.read_json(stage_input.slug, "meta.json") or {}
         outline_data = self._fm.read_json(stage_input.slug, "outline.json") or {}
         refs_data = self._fm.read_json(stage_input.slug, "references.json") or []
@@ -51,38 +59,56 @@ class GeneratorStage(Stage):
         )
 
         seo_keywords = ", ".join(meta.get("seo_keywords", []))
-
         format_id = meta.get("format_id", stage_input.format_id)
         registry = get_format_registry()
         format_spec = registry.get(format_id)
+        total = len(outline)
 
-        try:
-            response = await self._claude.run(
-                self._prompt.render(
-                    topic=stage_input.topic,
-                    title=meta.get("title", stage_input.topic),
-                    outline=outline_text,
-                    references=refs_text or "참고자료 없음",
-                    seo_keywords=seo_keywords or "키워드 없음",
-                    format_spec=format_spec,
+        self._emit(on_progress, f"본문 작성 시작 (총 {total}개 섹션)", {
+            "total_sections": total, "completed_sections": 0,
+        })
+
+        sections: list[str] = []
+        for i, section in enumerate(outline):
+            heading = section.get("heading", f"섹션 {i + 1}")
+            self._emit(on_progress, f"섹션 {i + 1}/{total} 작성 중: {heading}", {
+                "total_sections": total,
+                "completed_sections": i,
+                "current_section": i + 1,
+                "section_heading": heading,
+                "status": "writing",
+            })
+
+            result = await self._writer.write_section(
+                topic=stage_input.topic,
+                title=meta.get("title", stage_input.topic),
+                section=section,
+                section_number=i + 1,
+                total_sections=total,
+                previous_sections=sections[-3:],
+                references=refs_text or "참고자료 없음",
+                seo_keywords=seo_keywords or "키워드 없음",
+                format_spec=format_spec,
+                full_outline=outline_text,
+            )
+
+            if not result.success:
+                return StageOutput(
+                    stage_name=self.name,
+                    success=False,
+                    error=f"섹션 {i + 1} 작성 실패: {result.error}",
                 )
-            )
-        except (RuntimeError, TimeoutError) as e:
-            logger.error("Generator Claude 응답 실패: %s", e)
-            return StageOutput(
-                stage_name=self.name,
-                success=False,
-                error=f"Generator 실행 실패: {e}",
-            )
 
-        content = response.text.strip()
-        if not content:
-            return StageOutput(
-                stage_name=self.name,
-                success=False,
-                error="Generator가 빈 응답을 반환했습니다",
-            )
+            sections.append(result.content)
 
+            self._emit(on_progress, f"섹션 {i + 1}/{total} 완료: {result.heading}", {
+                "total_sections": total,
+                "completed_sections": i + 1,
+                "section_heading": result.heading,
+                "section_char_count": result.char_count,
+            })
+
+        content = "\n\n".join(sections)
         self._fm.write_text(stage_input.slug, "final.md", content)
 
         char_count = len(content)
@@ -96,6 +122,9 @@ class GeneratorStage(Stage):
 
         image_results: list[dict] = []
         if self._image_gen:
+            self._emit(on_progress, "이미지 생성 중...", {
+                "total_sections": total, "completed_sections": total,
+            })
             try:
                 image_results = await self._image_gen.generate_all(
                     stage_input.slug, content, stage_input.topic
@@ -128,10 +157,7 @@ class GeneratorStage(Stage):
 
         logger.info(
             "Generator 완료: %d자, %d개 섹션, %d개 다이어그램, %d개 이미지",
-            char_count,
-            section_count,
-            len(diagrams),
-            image_count,
+            char_count, section_count, len(diagrams), image_count,
         )
 
         return StageOutput(
@@ -146,6 +172,20 @@ class GeneratorStage(Stage):
                 "thumbnail_path": thumbnail_path,
             },
         )
+
+    def _emit(
+        self,
+        on_progress: ProgressCallback | None,
+        message: str,
+        data: dict,
+    ) -> None:
+        if on_progress:
+            on_progress(PipelineEvent(
+                event_type="stage_progress",
+                stage=self.name,
+                message=message,
+                data=data,
+            ))
 
 
 def _extract_mermaid_blocks(content: str) -> list[str]:

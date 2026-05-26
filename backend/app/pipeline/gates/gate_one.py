@@ -12,7 +12,11 @@ class GateOneStage(Stage):
     def name(self) -> str:
         return "gate_one"
 
-    async def execute(self, stage_input: StageInput) -> StageOutput:
+    async def execute(
+        self,
+        stage_input: StageInput,
+        on_progress: "ProgressCallback | None" = None,
+    ) -> StageOutput:
         if self._auto_approve:
             logger.info("Gate 1 자동 승인 (auto_gate_one=True)")
             return StageOutput(

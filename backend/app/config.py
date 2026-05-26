@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     router_timeout: int = 120
     researcher_timeout: int = 300
     outliner_timeout: int = 180
-    generator_timeout: int = 900
+    generator_timeout: int = 1800
     validator_timeout: int = 300
     publisher_timeout: int = 300
 

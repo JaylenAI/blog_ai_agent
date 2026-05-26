@@ -2,44 +2,43 @@ import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from starlette.requests import Request
-from starlette.responses import Response
 
 from app.api.middleware.rate_limiter import RateLimiterMiddleware
 
 
-def _make_request(
+def _make_scope(
     ip: str = "127.0.0.1",
     forwarded_for: str | None = None,
-) -> MagicMock:
-    request = MagicMock(spec=Request)
-    request.client = MagicMock()
-    request.client.host = ip
+    path: str = "/api/v1/test",
+) -> dict:
+    headers: list[tuple[bytes, bytes]] = []
     if forwarded_for:
-        request.headers = {"x-forwarded-for": forwarded_for}
-    else:
-        request.headers = {}
-    return request
+        headers.append((b"x-forwarded-for", forwarded_for.encode()))
+    return {
+        "type": "http",
+        "method": "GET",
+        "path": path,
+        "headers": headers,
+        "client": (ip, 0),
+    }
 
 
 def test_get_client_ip_direct() -> None:
     middleware = RateLimiterMiddleware(MagicMock(), limit=10, window=60)
-    request = _make_request(ip="192.168.1.1")
-    assert middleware._get_client_ip(request) == "192.168.1.1"
+    scope = _make_scope(ip="192.168.1.1")
+    assert middleware._get_client_ip(scope) == "192.168.1.1"
 
 
 def test_get_client_ip_forwarded() -> None:
     middleware = RateLimiterMiddleware(MagicMock(), limit=10, window=60)
-    request = _make_request(forwarded_for="10.0.0.1, 10.0.0.2")
-    assert middleware._get_client_ip(request) == "10.0.0.1"
+    scope = _make_scope(forwarded_for="10.0.0.1, 10.0.0.2")
+    assert middleware._get_client_ip(scope) == "10.0.0.1"
 
 
 def test_get_client_ip_no_client() -> None:
     middleware = RateLimiterMiddleware(MagicMock(), limit=10, window=60)
-    request = MagicMock(spec=Request)
-    request.client = None
-    request.headers = {}
-    assert middleware._get_client_ip(request) == "unknown"
+    scope = {"type": "http", "headers": [], "client": None}
+    assert middleware._get_client_ip(scope) == "unknown"
 
 
 def test_cleanup_removes_expired() -> None:
@@ -52,44 +51,62 @@ def test_cleanup_removes_expired() -> None:
 
 @pytest.mark.asyncio
 async def test_allows_requests_under_limit() -> None:
-    middleware = RateLimiterMiddleware(MagicMock(), limit=3, window=60)
-    expected_response = Response(status_code=200)
-    call_next = AsyncMock(return_value=expected_response)
-    request = _make_request()
+    inner_app = AsyncMock()
+    middleware = RateLimiterMiddleware(inner_app, limit=3, window=60)
+    receive = AsyncMock()
+    send = AsyncMock()
 
     for _ in range(3):
-        response = await middleware.dispatch(request, call_next)
-        assert response.status_code == 200
+        scope = _make_scope()
+        await middleware(scope, receive, send)
+
+    assert inner_app.call_count == 3
 
 
 @pytest.mark.asyncio
 async def test_blocks_requests_over_limit() -> None:
-    middleware = RateLimiterMiddleware(MagicMock(), limit=2, window=60)
-    expected_response = Response(status_code=200)
-    call_next = AsyncMock(return_value=expected_response)
-    request = _make_request()
+    inner_app = AsyncMock()
+    middleware = RateLimiterMiddleware(inner_app, limit=2, window=60)
+    receive = AsyncMock()
 
-    await middleware.dispatch(request, call_next)
-    await middleware.dispatch(request, call_next)
-    response = await middleware.dispatch(request, call_next)
+    responses: list[dict] = []
 
-    assert response.status_code == 429
+    async def capture_send(message: dict) -> None:
+        responses.append(message)
+
+    for _ in range(2):
+        await middleware(_make_scope(), receive, AsyncMock())
+
+    responses.clear()
+    await middleware(_make_scope(), receive, capture_send)
+
+    status_msg = next(
+        (m for m in responses if m["type"] == "http.response.start"), None
+    )
+    assert status_msg is not None
+    assert status_msg["status"] == 429
 
 
 @pytest.mark.asyncio
 async def test_different_ips_have_separate_limits() -> None:
-    middleware = RateLimiterMiddleware(MagicMock(), limit=1, window=60)
-    expected_response = Response(status_code=200)
-    call_next = AsyncMock(return_value=expected_response)
+    inner_app = AsyncMock()
+    middleware = RateLimiterMiddleware(inner_app, limit=1, window=60)
+    receive = AsyncMock()
 
-    req1 = _make_request(ip="10.0.0.1")
-    req2 = _make_request(ip="10.0.0.2")
+    await middleware(_make_scope(ip="10.0.0.1"), receive, AsyncMock())
+    await middleware(_make_scope(ip="10.0.0.2"), receive, AsyncMock())
 
-    resp1 = await middleware.dispatch(req1, call_next)
-    resp2 = await middleware.dispatch(req2, call_next)
+    assert inner_app.call_count == 2
 
-    assert resp1.status_code == 200
-    assert resp2.status_code == 200
+    responses: list[dict] = []
 
-    resp3 = await middleware.dispatch(req1, call_next)
-    assert resp3.status_code == 429
+    async def capture_send(message: dict) -> None:
+        responses.append(message)
+
+    await middleware(_make_scope(ip="10.0.0.1"), receive, capture_send)
+
+    status_msg = next(
+        (m for m in responses if m["type"] == "http.response.start"), None
+    )
+    assert status_msg is not None
+    assert status_msg["status"] == 429

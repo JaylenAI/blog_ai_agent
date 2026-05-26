@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.pipeline.base import StageInput
 from app.pipeline.stages.s4_generator import GeneratorStage, _extract_mermaid_blocks
+from app.pipeline.stages.section_writer import SectionResult
 
 MOCK_META = {
     "title": "AI란 무엇인가?",
@@ -33,13 +34,11 @@ MOCK_REFS = [
     }
 ]
 
-MOCK_CONTENT = """# AI란 무엇인가?
+SECTION_1_CONTENT = """## 1. 들어가며
 
-## 1. 들어가며
+인공지능(AI)은 현대 기술의 핵심입니다. AI가 왜 중요한지 알아봅시다."""
 
-인공지능(AI)은 현대 기술의 핵심입니다.
-
-## 2. AI의 기본 개념
+SECTION_2_CONTENT = """## 2. AI의 기본 개념
 
 머신러닝과 딥러닝은 AI의 주요 분야입니다.
 
@@ -52,6 +51,33 @@ flowchart TD
 이상으로 마치겠습니다."""
 
 
+def _make_section_results(
+    contents: list[str] | None = None,
+    error_at: int | None = None,
+) -> list[SectionResult]:
+    if contents is None:
+        contents = [SECTION_1_CONTENT, SECTION_2_CONTENT]
+    results = []
+    for i, content in enumerate(contents):
+        if error_at is not None and i == error_at:
+            results.append(SectionResult(
+                section_number=i + 1,
+                heading=f"섹션 {i + 1}",
+                content="",
+                success=False,
+                error="CLI not found",
+            ))
+        else:
+            results.append(SectionResult(
+                section_number=i + 1,
+                heading=f"섹션 {i + 1}",
+                content=content,
+                success=True,
+                char_count=len(content),
+            ))
+    return results
+
+
 @dataclass(frozen=True)
 class MockClaudeResponse:
     text: str
@@ -60,18 +86,10 @@ class MockClaudeResponse:
 
 
 def _make_stage(
-    content: str | None = None,
-    error: Exception | None = None,
+    section_results: list[SectionResult] | None = None,
     outline: dict | None = None,
 ) -> tuple[GeneratorStage, AsyncMock, MagicMock]:
     mock_claude = AsyncMock()
-    if error:
-        mock_claude.run.side_effect = error
-    else:
-        mock_claude.run.return_value = MockClaudeResponse(
-            text=MOCK_CONTENT if content is None else content
-        )
-
     mock_fm = MagicMock()
 
     def read_json_side_effect(slug: str, filename: str) -> dict | list | None:
@@ -84,8 +102,17 @@ def _make_stage(
         return None
 
     mock_fm.read_json.side_effect = read_json_side_effect
+    mock_fm.images_dir.return_value = MagicMock()
 
-    return GeneratorStage(mock_claude, mock_fm), mock_claude, mock_fm
+    stage = GeneratorStage(mock_claude, mock_fm)
+
+    if section_results is None:
+        section_results = _make_section_results()
+
+    stage._writer = AsyncMock()
+    stage._writer.write_section = AsyncMock(side_effect=section_results)
+
+    return stage, mock_claude, mock_fm
 
 
 def _make_input() -> StageInput:
@@ -102,7 +129,7 @@ async def test_generator_name() -> None:
 
 
 async def test_generator_success() -> None:
-    stage, mock_claude, mock_fm = _make_stage()
+    stage, _, mock_fm = _make_stage()
     result = await stage.execute(_make_input())
 
     assert result.success is True
@@ -112,7 +139,8 @@ async def test_generator_success() -> None:
     assert result.data["diagram_count"] == 1
     assert "content_path" in result.data
 
-    mock_claude.run.assert_called_once()
+    stage._writer.write_section.assert_called()
+    assert stage._writer.write_section.call_count == 2
 
 
 async def test_generator_saves_final_md() -> None:
@@ -121,7 +149,8 @@ async def test_generator_saves_final_md() -> None:
 
     write_calls = mock_fm.write_text.call_args_list
     final_call = next(c for c in write_calls if c[0][1] == "final.md")
-    assert "AI란 무엇인가?" in final_call[0][2]
+    assert "들어가며" in final_call[0][2]
+    assert "AI의 기본 개념" in final_call[0][2]
 
 
 async def test_generator_saves_mermaid_diagrams() -> None:
@@ -150,33 +179,30 @@ async def test_generator_missing_outline_file() -> None:
     assert "아웃라인이 없습니다" in result.error
 
 
-async def test_generator_claude_error() -> None:
-    stage, _, _ = _make_stage(error=RuntimeError("CLI not found"))
+async def test_generator_section_write_failure() -> None:
+    results = _make_section_results(error_at=0)
+    stage, _, _ = _make_stage(section_results=results)
     result = await stage.execute(_make_input())
 
     assert result.success is False
-    assert "Generator 실행 실패" in result.error
+    assert "섹션 1 작성 실패" in result.error
 
 
-async def test_generator_empty_response() -> None:
-    stage, _, _ = _make_stage(content="")
+async def test_generator_second_section_failure() -> None:
+    results = _make_section_results(error_at=1)
+    stage, _, _ = _make_stage(section_results=results)
     result = await stage.execute(_make_input())
 
     assert result.success is False
-    assert "빈 응답" in result.error
-
-
-async def test_generator_whitespace_only_response() -> None:
-    stage, _, _ = _make_stage(content="   \n\n  ")
-    result = await stage.execute(_make_input())
-
-    assert result.success is False
-    assert "빈 응답" in result.error
+    assert "섹션 2 작성 실패" in result.error
 
 
 async def test_generator_no_diagrams() -> None:
-    content = "# 제목\n\n## 1. 들어가며\n\n본문입니다."
-    stage, _, mock_fm = _make_stage(content=content)
+    results = _make_section_results(contents=[
+        "## 1. 들어가며\n\n본문입니다.",
+        "## 2. 마치며\n\n끝입니다.",
+    ])
+    stage, _, mock_fm = _make_stage(section_results=results)
     result = await stage.execute(_make_input())
 
     assert result.success is True
@@ -185,15 +211,6 @@ async def test_generator_no_diagrams() -> None:
     write_calls = mock_fm.write_text.call_args_list
     diagram_calls = [c for c in write_calls if "diagram" in c[0][1]]
     assert len(diagram_calls) == 0
-
-
-async def test_generator_prompt_contains_topic() -> None:
-    stage, mock_claude, _ = _make_stage()
-    await stage.execute(_make_input())
-
-    prompt = mock_claude.run.call_args[0][0]
-    assert "AI란 무엇인가?" in prompt
-    assert "AI, 인공지능, 머신러닝" in prompt
 
 
 async def test_generator_reads_all_files() -> None:
@@ -205,6 +222,29 @@ async def test_generator_reads_all_files() -> None:
     assert "meta.json" in filenames
     assert "outline.json" in filenames
     assert "references.json" in filenames
+
+
+async def test_generator_emits_progress() -> None:
+    stage, _, _ = _make_stage()
+    events = []
+    await stage.execute(_make_input(), on_progress=lambda e: events.append(e))
+
+    assert len(events) >= 5
+    assert events[0].event_type == "stage_progress"
+    assert "본문 작성 시작" in events[0].message
+    assert "작성 중" in events[1].message
+    assert "섹션 1/2 완료" in events[2].message
+    assert "작성 중" in events[3].message
+    assert "섹션 2/2 완료" in events[4].message
+
+
+async def test_generator_passes_previous_sections() -> None:
+    stage, _, _ = _make_stage()
+    await stage.execute(_make_input())
+
+    calls = stage._writer.write_section.call_args_list
+    assert calls[0].kwargs["previous_sections"] == []
+    assert len(calls[1].kwargs["previous_sections"]) == 1
 
 
 def test_extract_mermaid_empty() -> None:

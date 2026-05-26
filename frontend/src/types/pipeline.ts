@@ -10,6 +10,7 @@ export type PipelineMode =
 export type EventType =
   | "stage_start"
   | "stage_complete"
+  | "stage_progress"
   | "stage_error"
   | "gate_pending"
   | "pipeline_complete"

@@ -69,9 +69,14 @@ class ClaudeClient:
             stderr=asyncio.subprocess.PIPE,
         )
 
-        stdout_bytes, stderr_bytes = await asyncio.wait_for(
-            process.communicate(), timeout=self._timeout
-        )
+        try:
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                process.communicate(), timeout=self._timeout
+            )
+        except TimeoutError:
+            process.kill()
+            await process.wait()
+            raise
 
         if process.returncode != 0:
             error_msg = stderr_bytes.decode(

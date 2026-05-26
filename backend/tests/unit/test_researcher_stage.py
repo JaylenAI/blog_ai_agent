@@ -67,10 +67,23 @@ async def test_researcher_empty_queries_list() -> None:
 async def test_researcher_success_with_all_librarians() -> None:
     stage, _, mock_fm = _make_stage()
 
-    official_refs = [_make_ref("https://official.com/1", "공식1", "official")]
-    github_refs = [_make_ref("https://github.com/repo1", "GitHub1", "github")]
-    blog_en_refs = [_make_ref("https://blog.com/en1", "EN Blog1", "blog_en")]
-    blog_kr_refs = [_make_ref("https://blog.kr/kr1", "KR Blog1", "blog_kr")]
+    official_refs = [
+        _make_ref("https://official.com/1", "공식1", "official"),
+        _make_ref("https://official.com/2", "공식2", "official"),
+        _make_ref("https://official.com/3", "공식3", "official"),
+    ]
+    github_refs = [
+        _make_ref("https://github.com/repo1", "GitHub1", "github"),
+        _make_ref("https://github.com/repo2", "GitHub2", "github"),
+    ]
+    blog_en_refs = [
+        _make_ref("https://blog.com/en1", "EN Blog1", "blog_en"),
+        _make_ref("https://blog.com/en2", "EN Blog2", "blog_en"),
+    ]
+    blog_kr_refs = [
+        _make_ref("https://blog.kr/kr1", "KR Blog1", "blog_kr"),
+        _make_ref("https://blog.kr/kr2", "KR Blog2", "blog_kr"),
+    ]
 
     with patch.object(stage, "_librarians") as mock_libs:
         mock_lib_official = AsyncMock()
@@ -88,12 +101,12 @@ async def test_researcher_success_with_all_librarians() -> None:
         result = await stage.execute(_make_input())
 
     assert result.success is True
-    assert result.data["total_count"] == 4
-    assert result.data["by_source"]["official"] == 1
-    assert result.data["by_source"]["github"] == 1
-    assert result.data["by_source"]["blog_en"] == 1
-    assert result.data["by_source"]["blog_kr"] == 1
-    assert len(result.data["references"]) == 4
+    assert result.data["total_count"] == 9
+    assert result.data["by_source"]["official"] == 3
+    assert result.data["by_source"]["github"] == 2
+    assert result.data["by_source"]["blog_en"] == 2
+    assert result.data["by_source"]["blog_kr"] == 2
+    assert len(result.data["references"]) == 9
 
     mock_fm.write_json.assert_called_once()
     call_args = mock_fm.write_json.call_args[0]
@@ -105,9 +118,8 @@ async def test_researcher_handles_librarian_exception() -> None:
     stage, _, mock_fm = _make_stage()
 
     good_refs = [
-        _make_ref("https://official.com/1", "공식1", "official"),
-        _make_ref("https://official.com/2", "공식2", "official"),
-        _make_ref("https://official.com/3", "공식3", "official"),
+        _make_ref(f"https://official.com/{i}", f"공식{i}", "official")
+        for i in range(1, 9)
     ]
 
     with patch.object(stage, "_librarians") as mock_libs:
@@ -126,7 +138,7 @@ async def test_researcher_handles_librarian_exception() -> None:
         result = await stage.execute(_make_input())
 
     assert result.success is True
-    assert result.data["total_count"] == 3
+    assert result.data["total_count"] == 8
 
 
 async def test_researcher_all_librarians_fail() -> None:
@@ -158,13 +170,15 @@ async def test_researcher_deduplicates_by_url() -> None:
     dup_refs = [
         _make_ref("https://same-url.com", "제목1", "official"),
         _make_ref("https://same-url.com", "제목2", "github"),
-        _make_ref("https://unique.com", "제목3", "blog_en"),
-        _make_ref("https://unique2.com", "제목4", "blog_kr"),
+    ]
+    extra_refs = [
+        _make_ref(f"https://unique{i}.com", f"제목{i}", "blog_en")
+        for i in range(1, 9)
     ]
 
     with patch.object(stage, "_librarians") as mock_libs:
         mock_lib = AsyncMock()
-        mock_lib.search.return_value = dup_refs
+        mock_lib.search.return_value = dup_refs + extra_refs
         mock_lib2 = AsyncMock()
         mock_lib2.search.return_value = []
         mock_lib3 = AsyncMock()
@@ -177,7 +191,8 @@ async def test_researcher_deduplicates_by_url() -> None:
 
         result = await stage.execute(_make_input())
 
-    assert result.data["total_count"] == 3
+    assert result.success is True
+    assert result.data["total_count"] == 9
 
 
 async def test_researcher_sorts_by_relevance_desc() -> None:
@@ -187,6 +202,9 @@ async def test_researcher_sorts_by_relevance_desc() -> None:
         _make_ref("https://a.com", "낮은점수", "official", 0.5),
         _make_ref("https://b.com", "높은점수", "github", 0.99),
         _make_ref("https://c.com", "중간점수", "blog_en", 0.75),
+    ] + [
+        _make_ref(f"https://extra{i}.com", f"추가{i}", "official", 0.7 + i * 0.01)
+        for i in range(1, 7)
     ]
 
     with patch.object(stage, "_librarians") as mock_libs:
@@ -204,6 +222,7 @@ async def test_researcher_sorts_by_relevance_desc() -> None:
 
         result = await stage.execute(_make_input())
 
+    assert result.success is True
     scores = [r["relevance_score"] for r in result.data["references"]]
     assert scores == sorted(scores, reverse=True)
     assert scores[0] == 0.99
@@ -240,9 +259,8 @@ async def test_researcher_output_structure() -> None:
     stage, _, _ = _make_stage()
 
     refs = [
-        _make_ref("https://a.com", "자료1", "official"),
-        _make_ref("https://b.com", "자료2", "official"),
-        _make_ref("https://c.com", "자료3", "github"),
+        _make_ref(f"https://ref{i}.com", f"자료{i}", "official" if i <= 4 else "github")
+        for i in range(1, 10)
     ]
 
     with patch.object(stage, "_librarians") as mock_libs:
@@ -262,6 +280,7 @@ async def test_researcher_output_structure() -> None:
 
     assert isinstance(result, StageOutput)
     assert result.stage_name == "researcher"
+    assert result.success is True
     assert "references" in result.data
     assert "total_count" in result.data
     assert "by_source" in result.data

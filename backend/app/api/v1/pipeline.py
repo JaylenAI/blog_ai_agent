@@ -319,7 +319,11 @@ def _sse_from_queue(queue: asyncio.Queue) -> EventSourceResponse:
     async def event_generator():
         try:
             while True:
-                event_dict = await queue.get()
+                try:
+                    event_dict = await asyncio.wait_for(queue.get(), timeout=15)
+                except asyncio.TimeoutError:
+                    yield {"comment": "keepalive"}
+                    continue
                 if event_dict is None:
                     break
                 yield {

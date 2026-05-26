@@ -40,7 +40,7 @@ describe("usePipelineActions", () => {
     });
   });
 
-  it("approveGate closes gate modal and starts SSE stream", async () => {
+  it("approveGate starts SSE stream with correct URL and callbacks", async () => {
     useArticleStore.setState({
       gateModal: { gate: "gate_one", runId: 5 },
     });
@@ -51,7 +51,6 @@ describe("usePipelineActions", () => {
       await result.current.approveGate(5);
     });
 
-    expect(useArticleStore.getState().gateModal).toBeNull();
     expect(mockStartStream).toHaveBeenCalledWith(
       "/pipeline/runs/5/approve/stream",
       {},

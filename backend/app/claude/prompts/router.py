@@ -53,7 +53,7 @@ recommended_format 필드에 "{format_spec.id}"를 그대로 반환하세요.
   "title": "SEO 최적화된 한국어 제목 (60자 이내)",
   "category": "카테고리 (예: AI/ML, Backend, Frontend, DevOps)",
   "target_audience": "대상 독자 수준 (beginner | intermediate | advanced)",
-  "search_queries": ["자료 조사용 검색 쿼리 4-6개"],
+  "search_queries": ["주제 전체를 반영하는 구체적 검색 쿼리 6-8개 — 도구명만이 아니라 주제의 핵심 행위/목적을 포함. 한국어 2-3개 + 영어 4-5개 혼합"],
   "seo_keywords": ["SEO 키워드 정확히 10개 — 주제 핵심어 + 관련 롱테일 혼합"],
   "estimated_sections": 7,
   "recommended_format": "형식 ID (concept, tutorial, comparison, ...)"

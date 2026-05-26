@@ -85,56 +85,48 @@ function EventLog() {
 }
 
 function GenerateProgress() {
-  const events = usePipelineStore((s) => s.events);
+  const progress = usePipelineStore((s) => s.sectionProgress);
 
-  const outlineEvent = events.find(
-    (e) => e.event_type === "gate_pending" && e.stage === "gate_one",
+  if (!progress || progress.totalSections === 0) return null;
+
+  const pct = Math.round(
+    (progress.completedSections / progress.totalSections) * 100,
   );
-  const totalSections =
-    (outlineEvent?.data as { total_sections?: number } | undefined)
-      ?.total_sections ??
-    (outlineEvent?.data as { outline?: unknown[] } | undefined)?.outline
-      ?.length ??
-    0;
-
-  const completedSections = events.filter(
-    (e) =>
-      e.event_type === "stage_complete" &&
-      e.stage === "generator" &&
-      (e.data as { section_number?: number } | undefined)
-        ?.section_number != null,
-  ).length;
-
-  const completedImages = events.filter(
-    (e) =>
-      e.event_type === "stage_complete" &&
-      e.stage === "generator" &&
-      (e.data as { image?: boolean } | undefined)?.image === true,
-  ).length;
-
-  const totalImages =
-    (
-      events.find(
-        (e) =>
-          e.event_type === "stage_start" && e.stage === "generator",
-      )?.data as { total_images?: number } | undefined
-    )?.total_images ?? 0;
-
-  if (totalSections === 0 && totalImages === 0) return null;
 
   return (
-    <div className="pl-meta" style={{ marginTop: 4 }}>
-      {totalSections > 0 && (
-        <span>
-          섹션 {completedSections}/{totalSections} 작성 중
-        </span>
-      )}
-      {totalImages > 0 && (
-        <span>
-          {" "}
-          · 이미지 {completedImages}/{totalImages} 렌더 완료
-        </span>
-      )}
+    <div style={{ marginTop: 4 }}>
+      <div className="pl-meta">
+        {progress.status === "writing" ? (
+          <span>
+            섹션 {progress.currentSection}/{progress.totalSections} 작성 중
+            {progress.currentHeading && ` · ${progress.currentHeading}`}
+          </span>
+        ) : (
+          <span>
+            섹션 {progress.completedSections}/{progress.totalSections} 완료
+            {progress.currentHeading && ` · ${progress.currentHeading}`}
+          </span>
+        )}
+      </div>
+      <div
+        style={{
+          marginTop: 4,
+          height: 4,
+          borderRadius: 2,
+          background: "var(--bg-tertiary, #2a2a2a)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            width: `${pct}%`,
+            height: "100%",
+            borderRadius: 2,
+            background: "var(--accent, #60a5fa)",
+            transition: "width 0.3s ease",
+          }}
+        />
+      </div>
     </div>
   );
 }

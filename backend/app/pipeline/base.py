@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 
@@ -27,10 +30,17 @@ class PipelineEvent:
     data: dict = field(default_factory=dict)
 
 
+ProgressCallback = Callable[[PipelineEvent], None]
+
+
 class Stage(ABC):
     @property
     @abstractmethod
     def name(self) -> str: ...
 
     @abstractmethod
-    async def execute(self, stage_input: StageInput) -> StageOutput: ...
+    async def execute(
+        self,
+        stage_input: StageInput,
+        on_progress: ProgressCallback | None = None,
+    ) -> StageOutput: ...

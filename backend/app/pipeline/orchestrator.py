@@ -74,10 +74,38 @@ class PipelineOrchestrator:
             stage_start = datetime.now(UTC)
             timeout = self._get_timeout(stage.name)
             try:
-                output = await asyncio.wait_for(
-                    stage.execute(stage_input),
-                    timeout=timeout,
+                progress_queue: asyncio.Queue[PipelineEvent] = asyncio.Queue()
+                task = asyncio.create_task(
+                    stage.execute(
+                        stage_input,
+                        on_progress=lambda evt: progress_queue.put_nowait(evt),
+                    )
                 )
+
+                deadline = asyncio.get_event_loop().time() + timeout
+                while not task.done():
+                    remaining = deadline - asyncio.get_event_loop().time()
+                    if remaining <= 0:
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass
+                        raise TimeoutError(
+                            f"Stage {stage.name} 타임아웃 ({timeout}초)"
+                        )
+                    try:
+                        evt = await asyncio.wait_for(
+                            progress_queue.get(), timeout=min(0.5, remaining)
+                        )
+                        yield evt
+                    except asyncio.TimeoutError:
+                        continue
+
+                while not progress_queue.empty():
+                    yield progress_queue.get_nowait()
+
+                output = task.result()
             except Exception as e:
                 elapsed = (datetime.now(UTC) - stage_start).total_seconds()
                 durations[stage.name] = elapsed

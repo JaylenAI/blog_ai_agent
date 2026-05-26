@@ -1,9 +1,8 @@
 import time
 from collections import defaultdict
 
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.utils.logger import get_logger
 
@@ -13,20 +12,28 @@ DEFAULT_LIMIT = 60
 DEFAULT_WINDOW = 60
 
 
-class RateLimiterMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, *, limit: int = DEFAULT_LIMIT, window: int = DEFAULT_WINDOW):
-        super().__init__(app)
+class RateLimiterMiddleware:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        limit: int = DEFAULT_LIMIT,
+        window: int = DEFAULT_WINDOW,
+    ) -> None:
+        self.app = app
         self._limit = limit
         self._window = window
         self._requests: dict[str, list[float]] = defaultdict(list)
         self._request_count: int = 0
         self._full_cleanup_interval: int = 100
 
-    def _get_client_ip(self, request: Request) -> str:
-        forwarded = request.headers.get("x-forwarded-for")
+    def _get_client_ip(self, scope: Scope) -> str:
+        headers = dict(scope.get("headers", []))
+        forwarded = headers.get(b"x-forwarded-for", b"").decode()
         if forwarded:
             return forwarded.split(",")[0].strip()
-        return request.client.host if request.client else "unknown"
+        client = scope.get("client")
+        return client[0] if client else "unknown"
 
     def _cleanup(self, ip: str, now: float) -> None:
         cutoff = now - self._window
@@ -35,14 +42,19 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
     def _full_cleanup(self, now: float) -> None:
         stale_cutoff = now - self._window * 2
         stale_ips = [
-            ip for ip, timestamps in self._requests.items()
+            ip
+            for ip, timestamps in self._requests.items()
             if not timestamps or timestamps[-1] <= stale_cutoff
         ]
         for ip in stale_ips:
             del self._requests[ip]
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        ip = self._get_client_ip(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        ip = self._get_client_ip(scope)
         now = time.monotonic()
         self._cleanup(ip, now)
 
@@ -52,11 +64,13 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
 
         if len(self._requests[ip]) >= self._limit:
             logger.warning("Rate limit exceeded: %s", ip)
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=429,
                 content={"success": False, "error": "Too many requests"},
                 headers={"Retry-After": str(self._window)},
             )
+            await response(scope, receive, send)
+            return
 
         self._requests[ip].append(now)
-        return await call_next(request)
+        await self.app(scope, receive, send)

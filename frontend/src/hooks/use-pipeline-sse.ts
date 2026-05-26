@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { usePipelineStore } from "../stores/pipeline-store";
 import { useAppStore } from "../stores/app-store";
 import { useNotificationStore } from "../stores/notification-store";
@@ -6,14 +6,15 @@ import type { PipelineEvent } from "../types/pipeline";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
+let _currentAbort: AbortController | null = null;
+
 export interface SSECallbacks {
   onRunId?: (runId: number) => void;
   onEvent?: (event: PipelineEvent) => void;
 }
 
 export function usePipelineSSE() {
-  const abortRef = useRef<AbortController | null>(null);
-  const { addEvent, setRunning, setError } = usePipelineStore();
+  const { addEvent, setRunning, setError, setSectionProgress } = usePipelineStore();
   const { setPipelineMode, openGateModal, addToast } = useAppStore();
   const addNotification = useNotificationStore((s) => s.addNotification);
 
@@ -23,8 +24,29 @@ export function usePipelineSSE() {
         case "stage_start":
           if (event.stage === "researcher") setPipelineMode("research");
           else if (event.stage === "outliner") setPipelineMode("outline");
-          else if (event.stage === "generator") setPipelineMode("generate");
-          else if (event.stage === "validator") setPipelineMode("validate");
+          else if (event.stage === "generator") {
+            setPipelineMode("generate");
+            setSectionProgress(null);
+          } else if (event.stage === "validator") {
+            setPipelineMode("validate");
+            setSectionProgress(null);
+          }
+          break;
+        case "stage_progress":
+          if (event.stage === "generator" && event.data) {
+            const total = (event.data.total_sections as number) ?? 0;
+            const completed = (event.data.completed_sections as number) ?? 0;
+            const current = (event.data.current_section as number) ?? completed;
+            const heading = (event.data.section_heading as string) ?? "";
+            const status = (event.data.status as string) === "writing" ? "writing" as const : "done" as const;
+            setSectionProgress({
+              totalSections: total,
+              completedSections: completed,
+              currentSection: current,
+              currentHeading: heading,
+              status,
+            });
+          }
           break;
         case "gate_pending":
           if (event.stage === "gate_one") {
@@ -74,7 +96,7 @@ export function usePipelineSSE() {
           break;
       }
     },
-    [setPipelineMode, openGateModal, setError, addToast, addNotification],
+    [setPipelineMode, openGateModal, setError, addToast, addNotification, setSectionProgress],
   );
 
   const startStream = useCallback(
@@ -83,9 +105,9 @@ export function usePipelineSSE() {
       options: RequestInit = {},
       callbacks?: SSECallbacks,
     ) => {
-      abortRef.current?.abort();
+      _currentAbort?.abort();
       const controller = new AbortController();
-      abortRef.current = controller;
+      _currentAbort = controller;
 
       setRunning(true);
       setError(null);
@@ -155,22 +177,17 @@ export function usePipelineSSE() {
         }
       } finally {
         setRunning(false);
-        abortRef.current = null;
+        if (_currentAbort === controller) {
+          _currentAbort = null;
+        }
       }
     },
     [addEvent, setRunning, setError, setPipelineMode, handleEventType, addToast],
   );
 
   const abort = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-      abortRef.current = null;
-    };
+    _currentAbort?.abort();
+    _currentAbort = null;
   }, []);
 
   return { startStream, abort };
