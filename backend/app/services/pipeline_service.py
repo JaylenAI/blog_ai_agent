@@ -10,7 +10,7 @@ from app.db.repositories.article_repo import ArticleRepository
 from app.db.repositories.pipeline_repo import PipelineRepository
 from app.db.repositories.validation_repo import ValidationRepository
 from app.exceptions import InvalidStateError, NotFoundError
-from app.models.article import Article
+from app.models.article import Article, ArticleStatus
 from app.models.pipeline_run import PipelineRun, PipelineStage, PipelineStatus
 from app.models.validation import Validation, ValidationCategory
 from app.pipeline.base import PipelineEvent, Stage
@@ -253,7 +253,19 @@ class PipelineService:
             )
             return
 
-        new_run = PipelineRun(article_id=article.id)
+        previous_retries = await self._pipeline_repo.count_retries(article.id)
+        if previous_retries >= settings.max_retry_count:
+            yield PipelineEvent(
+                event_type="pipeline_error",
+                stage="retry",
+                message=f"최대 재시도 횟수({settings.max_retry_count})를 초과했습니다",
+            )
+            return
+
+        new_run = PipelineRun(
+            article_id=article.id,
+            retry_count=previous_retries + 1,
+        )
         new_run = await self._pipeline_repo.create(new_run)
 
         orchestrator = PipelineOrchestrator(self._build_all_stages())
@@ -337,6 +349,8 @@ class PipelineService:
         return []
 
     async def _persist_metadata(self, article: "Article") -> None:
+        from datetime import UTC, datetime
+
         meta = self._fm.read_json(article.slug, "meta.json")
         if isinstance(meta, dict):
             tags = meta.get("seo_keywords", [])
@@ -348,6 +362,11 @@ class PipelineService:
             title = meta.get("title", "")
             if title and article.title == article.topic:
                 article.title = title
+            published_url = meta.get("published_url", "")
+            if published_url:
+                article.published_url = published_url
+                article.published_at = datetime.now(UTC)
+                article.status = ArticleStatus.PUBLISHED
 
         refs = self._fm.read_json(article.slug, "references.json")
         if isinstance(refs, list):

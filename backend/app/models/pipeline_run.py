@@ -4,7 +4,7 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Text
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, JSON, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -48,6 +48,9 @@ class PipelineRun(TimestampMixin, Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     error_message: Mapped[str] = mapped_column(Text, default="")
+    retry_count: Mapped[int] = mapped_column(default=0)
+    duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    stage_durations: Mapped[dict] = mapped_column(JSON, default=dict)
 
     article: Mapped[Article] = relationship(back_populates="pipeline_runs")
     validations: Mapped[list[Validation]] = relationship(

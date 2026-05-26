@@ -12,9 +12,25 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
+STAGE_TIMEOUTS: dict[str, str] = {
+    "router": "router_timeout",
+    "researcher": "researcher_timeout",
+    "outliner": "outliner_timeout",
+    "generator": "generator_timeout",
+    "validator": "validator_timeout",
+    "publisher": "publisher_timeout",
+}
+
+
 class PipelineOrchestrator:
     def __init__(self, stages: list[Stage]) -> None:
         self._stages = stages
+
+    def _get_timeout(self, stage_name: str) -> int:
+        attr = STAGE_TIMEOUTS.get(stage_name)
+        if attr:
+            return getattr(settings, attr, settings.stage_timeout)
+        return settings.stage_timeout
 
     async def execute(
         self,
@@ -36,6 +52,7 @@ class PipelineOrchestrator:
             format_id=format_id,
         )
 
+        durations: dict[str, float] = dict(pipeline_run.stage_durations or {})
         first = True
         for stage in self._stages:
             pipeline_run.current_stage = PipelineStage(stage.name)
@@ -53,12 +70,17 @@ class PipelineOrchestrator:
                 data=start_data,
             )
 
+            stage_start = datetime.now(UTC)
+            timeout = self._get_timeout(stage.name)
             try:
                 output = await asyncio.wait_for(
                     stage.execute(stage_input),
-                    timeout=settings.stage_timeout,
+                    timeout=timeout,
                 )
             except Exception as e:
+                elapsed = (datetime.now(UTC) - stage_start).total_seconds()
+                durations[stage.name] = elapsed
+                pipeline_run.stage_durations = durations
                 logger.error("Stage %s 실패: %s", stage.name, e, exc_info=True)
                 pipeline_run.status = PipelineStatus.FAILED
                 pipeline_run.error_message = str(e)
@@ -70,6 +92,10 @@ class PipelineOrchestrator:
                     message=str(e),
                 )
                 return
+
+            elapsed = (datetime.now(UTC) - stage_start).total_seconds()
+            durations[stage.name] = round(elapsed, 2)
+            pipeline_run.stage_durations = durations
 
             if not output.success:
                 pipeline_run.status = PipelineStatus.FAILED
@@ -112,6 +138,8 @@ class PipelineOrchestrator:
 
         pipeline_run.status = PipelineStatus.COMPLETED
         pipeline_run.completed_at = datetime.now(UTC)
+        total = (pipeline_run.completed_at - pipeline_run.started_at).total_seconds()
+        pipeline_run.duration_seconds = round(total, 2)
         await session.flush()
 
         yield PipelineEvent(

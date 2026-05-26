@@ -16,6 +16,9 @@ class PipelineRunResponse(BaseModel):
     started_at: datetime | None
     completed_at: datetime | None
     error_message: str
+    retry_count: int = 0
+    duration_seconds: float | None = None
+    stage_durations: dict = {}
 
 
 class PipelineStartRequest(BaseModel):
