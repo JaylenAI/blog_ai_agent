@@ -1,8 +1,10 @@
 import re
+import statistics
 
 from app.claude.client import ClaudeClient
 from app.claude.prompts.oracle import OraclePrompt
 from app.claude.prompts.validator import ValidatorPrompt
+from app.config import settings
 from app.formats import get_format_registry
 from app.formats.schema import FormatSpec
 from app.pipeline.base import Stage, StageInput, StageOutput
@@ -58,7 +60,7 @@ class ValidatorStage(Stage):
 
         use_oracle = (
             stage_input.data.get("use_oracle", False)
-            or len(content) >= 10000
+            or len(content) >= settings.oracle_threshold_chars
         )
         oracle_results: list[dict] = []
         if use_oracle:
@@ -124,6 +126,14 @@ def _run_rule_checks(
         _check_slop_monotony(content),
         _check_slop_superlatives(content),
         _check_readability(content),
+        _check_keyword_density(content, meta),
+        _check_heading_keyword(content, meta),
+        _check_image_alt(content),
+        _check_definition_patterns(content),
+        _check_comparison_tables(content),
+        _check_quantitative_data(content),
+        _check_ai_tell_words(content),
+        _check_burstiness(content),
     ]
 
 
@@ -260,7 +270,7 @@ def _check_keyword_presence(content: str, meta: dict) -> dict:
 
 def _check_slop_can_do(content: str) -> dict:
     count = len(re.findall(r"할 수 있습니다", content))
-    threshold = 5
+    threshold = settings.slop_can_do_threshold
     passed = count <= threshold
     score = max(0.0, 1.0 - (count - threshold) * 0.15) if not passed else 1.0
     return {
@@ -282,7 +292,7 @@ def _check_slop_empty_emphasis(content: str) -> dict:
         r"반드시 알아야",
     ]
     hits = sum(len(re.findall(p, content)) for p in patterns)
-    threshold = 3
+    threshold = settings.slop_emphasis_threshold
     passed = hits <= threshold
     score = max(0.0, 1.0 - (hits - threshold) * 0.2) if not passed else 1.0
     return {
@@ -325,7 +335,7 @@ def _check_slop_superlatives(content: str) -> dict:
         r"없어서는 안 될\s",
     ]
     hits = sum(len(re.findall(p, content)) for p in patterns)
-    threshold = 2
+    threshold = settings.slop_superlatives_threshold
     passed = hits <= threshold
     return {
         "category": "style",
@@ -350,12 +360,12 @@ def _check_readability(content: str) -> dict:
             "message": "문장을 감지할 수 없습니다",
         }
     avg_len = sum(len(s) for s in sentences) / len(sentences)
-    passed = 15 <= avg_len <= 80
-    if avg_len < 15:
-        score = avg_len / 15
+    passed = settings.sentence_length_min <= avg_len <= settings.sentence_length_max
+    if avg_len < settings.sentence_length_min:
+        score = avg_len / settings.sentence_length_min
         msg = f"평균 문장 길이 {avg_len:.0f}자 — 너무 짧음"
-    elif avg_len > 80:
-        score = max(0.0, 1.0 - (avg_len - 80) / 40)
+    elif avg_len > settings.sentence_length_max:
+        score = max(0.0, 1.0 - (avg_len - settings.sentence_length_max) / 40)
         msg = f"평균 문장 길이 {avg_len:.0f}자 — 너무 김"
     else:
         score = 1.0
@@ -366,6 +376,204 @@ def _check_readability(content: str) -> dict:
         "passed": passed,
         "score": round(score, 2),
         "message": msg,
+    }
+
+
+def _check_keyword_density(content: str, meta: dict) -> dict:
+    keywords = meta.get("seo_keywords", [])
+    if not keywords:
+        return {
+            "category": "seo",
+            "item": "키워드 밀도 (0.5~2.5%)",
+            "passed": False,
+            "score": 0.0,
+            "message": "키워드 정보 없음",
+        }
+    primary = keywords[0].lower()
+    total_chars = len(content)
+    if total_chars == 0:
+        return {
+            "category": "seo",
+            "item": "키워드 밀도 (0.5~2.5%)",
+            "passed": False,
+            "score": 0.0,
+            "message": "본문 없음",
+        }
+    count = content.lower().count(primary)
+    density = (count * len(primary)) / total_chars
+    passed = settings.keyword_density_min <= density <= settings.keyword_density_max
+    return {
+        "category": "seo",
+        "item": "키워드 밀도 (0.5~2.5%)",
+        "passed": passed,
+        "score": 1.0 if passed else max(0.0, 1.0 - abs(density - 0.015) * 50),
+        "message": f"'{primary}' 밀도 {density * 100:.2f}%"
+        + ("" if passed else " — 0.5~2.5% 권장"),
+    }
+
+
+def _check_heading_keyword(content: str, meta: dict) -> dict:
+    keywords = meta.get("seo_keywords", [])
+    if not keywords:
+        return {
+            "category": "seo",
+            "item": "H2/H3 키워드 포함",
+            "passed": False,
+            "score": 0.0,
+            "message": "키워드 정보 없음",
+        }
+    headings = re.findall(r"^#{2,3}\s+(.+)$", content, re.MULTILINE)
+    if not headings:
+        return {
+            "category": "seo",
+            "item": "H2/H3 키워드 포함",
+            "passed": False,
+            "score": 0.0,
+            "message": "H2/H3 헤딩 없음",
+        }
+    kw_lower = [kw.lower() for kw in keywords]
+    matched = sum(
+        1 for h in headings if any(kw in h.lower() for kw in kw_lower)
+    )
+    ratio = matched / len(headings)
+    passed = ratio >= 0.3
+    return {
+        "category": "seo",
+        "item": "H2/H3 키워드 포함",
+        "passed": passed,
+        "score": round(min(1.0, ratio / 0.3), 2),
+        "message": f"{matched}/{len(headings)} 헤딩에 키워드 포함"
+        + ("" if passed else " — 30% 이상 권장"),
+    }
+
+
+def _check_image_alt(content: str) -> dict:
+    images = re.findall(r"!\[([^\]]*)\]\(", content)
+    if not images:
+        return {
+            "category": "seo",
+            "item": "이미지 alt 텍스트",
+            "passed": True,
+            "score": 1.0,
+            "message": "이미지 없음 (해당 없음)",
+        }
+    empty_alt = sum(1 for alt in images if not alt.strip())
+    passed = empty_alt == 0
+    return {
+        "category": "seo",
+        "item": "이미지 alt 텍스트",
+        "passed": passed,
+        "score": 1.0 if passed else round(1.0 - empty_alt / len(images), 2),
+        "message": f"{len(images)}개 이미지 중 {empty_alt}개 alt 누락"
+        if not passed
+        else f"{len(images)}개 이미지 모두 alt 있음",
+    }
+
+
+def _check_definition_patterns(content: str) -> dict:
+    patterns = [
+        r"(?:이란|란|은|는)\s*[^.]*(?:을 의미|를 의미|을 뜻|를 뜻|이다|입니다)",
+        r"(?:정의|개념|의미)(?:는|란|에 대해)",
+        r"즉,?\s+",
+    ]
+    hits = sum(len(re.findall(p, content)) for p in patterns)
+    passed = hits >= 2
+    return {
+        "category": "aeo",
+        "item": "정의 패턴 (AEO)",
+        "passed": passed,
+        "score": min(1.0, hits / 2),
+        "message": f"{hits}개 정의 패턴 감지"
+        + ("" if passed else " — 2개 이상 권장 (AI 답변 추출에 유리)"),
+    }
+
+
+def _check_comparison_tables(content: str) -> dict:
+    has_table = "<table" in content.lower()
+    comparison_hints = len(re.findall(
+        r"(?:비교|차이점|장단점|vs\.?|versus|대비)", content, re.IGNORECASE
+    ))
+    if comparison_hints >= 2 and not has_table:
+        return {
+            "category": "aeo",
+            "item": "비교 테이블 (AEO)",
+            "passed": False,
+            "score": 0.3,
+            "message": f"비교 키워드 {comparison_hints}회 감지 — 비교표 추가 권장",
+        }
+    return {
+        "category": "aeo",
+        "item": "비교 테이블 (AEO)",
+        "passed": True,
+        "score": 1.0,
+        "message": "통과" + (f" (비교 키워드 {comparison_hints}회)" if comparison_hints else ""),
+    }
+
+
+def _check_quantitative_data(content: str) -> dict:
+    number_patterns = re.findall(
+        r"\d+(?:\.\d+)?(?:%|퍼센트|배|억|만|천|GB|MB|ms|초|분|시간)", content
+    )
+    passed = len(number_patterns) >= 3
+    return {
+        "category": "geo",
+        "item": "정량적 데이터 (GEO)",
+        "passed": passed,
+        "score": min(1.0, len(number_patterns) / 3),
+        "message": f"{len(number_patterns)}개 수치 데이터 감지"
+        + ("" if passed else " — 3개 이상 권장 (AI 인용에 유리)"),
+    }
+
+
+def _check_ai_tell_words(content: str) -> dict:
+    tell_words = [
+        r"살펴보겠습니다",
+        r"알아보겠습니다",
+        r"알아보도록 하겠습니다",
+        r"확인해 보겠습니다",
+        r"다루어 보겠습니다",
+        r"이해하는 것이 중요합니다",
+        r"주목할 만합니다",
+        r"주목할 필요가 있습니다",
+        r"과언이 아닙니다",
+    ]
+    hits = sum(len(re.findall(p, content)) for p in tell_words)
+    threshold = 4
+    passed = hits <= threshold
+    score = max(0.0, 1.0 - (hits - threshold) * 0.15) if not passed else 1.0
+    return {
+        "category": "style",
+        "item": "AI Tell-word 감지",
+        "passed": passed,
+        "score": round(score, 2),
+        "message": f"{hits}회 감지"
+        + ("" if passed else f" — {threshold}회 이하 권장"),
+    }
+
+
+def _check_burstiness(content: str) -> dict:
+    plain = re.sub(r"```[\s\S]*?```", "", content)
+    plain = re.sub(r"<[^>]+>", "", plain)
+    plain = re.sub(r"[#*\->`|]", "", plain)
+    sentences = [s.strip() for s in re.split(r"[.?!]\s", plain) if len(s.strip()) > 3]
+    if len(sentences) < 5:
+        return {
+            "category": "geo",
+            "item": "Burstiness 점수",
+            "passed": True,
+            "score": 1.0,
+            "message": "문장 수 부족 (해당 없음)",
+        }
+    lengths = [len(s) for s in sentences]
+    std = statistics.stdev(lengths)
+    passed = std >= settings.burstiness_min_std
+    return {
+        "category": "geo",
+        "item": "Burstiness 점수",
+        "passed": passed,
+        "score": min(1.0, std / settings.burstiness_min_std) if not passed else 1.0,
+        "message": f"문장 길이 표준편차 {std:.1f}"
+        + ("" if passed else f" — {settings.burstiness_min_std} 이상 권장 (자연스러운 글)"),
     }
 
 
