@@ -1,8 +1,7 @@
 import { useEffect } from "react";
 import { useAppStore } from "../../stores/app-store";
+import { TOAST } from "../../constants/ui";
 import { Icons } from "./Icons";
-
-const AUTO_DISMISS_MS = 5000;
 
 export function ToastContainer() {
   const toasts = useAppStore((s) => s.toasts);
@@ -12,7 +11,7 @@ export function ToastContainer() {
     if (toasts.length === 0) return;
 
     const timers = toasts.map((toast) =>
-      setTimeout(() => removeToast(toast.id), AUTO_DISMISS_MS),
+      setTimeout(() => removeToast(toast.id), TOAST.AUTO_DISMISS_MS),
     );
     return () => timers.forEach(clearTimeout);
   }, [toasts, removeToast]);
@@ -21,27 +20,31 @@ export function ToastContainer() {
 
   return (
     <div
+      role="region"
+      aria-label="알림"
+      aria-live="polite"
       style={{
         position: "fixed",
-        bottom: 20,
-        right: 20,
-        zIndex: 9999,
+        bottom: TOAST.POSITION_BOTTOM,
+        right: TOAST.POSITION_RIGHT,
+        zIndex: TOAST.Z_INDEX,
         display: "flex",
         flexDirection: "column",
         gap: 8,
-        maxWidth: 400,
+        maxWidth: TOAST.MAX_WIDTH,
       }}
     >
       {toasts.map((toast) => (
         <div
           key={toast.id}
+          role="alert"
           style={{
             display: "flex",
             alignItems: "flex-start",
-            gap: 10,
+            gap: TOAST.GAP,
             padding: "12px 16px",
             borderRadius: "var(--radius)",
-            fontSize: 13,
+            fontSize: TOAST.FONT_SIZE,
             lineHeight: 1.5,
             color: "var(--text)",
             background:
