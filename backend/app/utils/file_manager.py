@@ -94,13 +94,15 @@ class FileManager:
 
     def backup_content(self, slug: str, max_versions: int = 10) -> str | None:
         import time
+        import uuid
 
         content = self.read_text(slug, "final.md")
         if not content:
             return None
 
         versions_dir = self._versions_dir(slug)
-        version_id = str(int(time.time() * 1000))
+        ts = str(int(time.time() * 1_000_000))
+        version_id = f"{ts}_{uuid.uuid4().hex[:8]}"
         version_file = versions_dir / f"{version_id}.md"
         version_file.write_text(content, encoding="utf-8")
 
@@ -123,10 +125,13 @@ class FileManager:
         result = []
         for f in sorted(versions_dir.glob("*.md"), key=lambda f: f.stem, reverse=True):
             try:
-                ts = int(f.stem) / 1000
+                stem = f.stem
+                ts_str = stem.split("_")[0] if "_" in stem else stem
+                ts_val = int(ts_str)
+                ts = ts_val / 1_000_000 if ts_val > 1e15 else ts_val / 1000
                 content = f.read_text(encoding="utf-8")
                 result.append({
-                    "version_id": f.stem,
+                    "version_id": stem,
                     "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts)),
                     "size": len(content),
                     "word_count": len(content.replace(" ", "").replace("\n", "")),

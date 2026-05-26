@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { usePipelineStore } from "../stores/pipeline-store";
 import { useAppStore } from "../stores/app-store";
 import { useNotificationStore } from "../stores/notification-store";
@@ -206,6 +206,14 @@ export function usePipelineSSE() {
 
   const abort = useCallback(() => {
     abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
   }, []);
 
   return { startStream, abort };

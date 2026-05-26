@@ -115,27 +115,39 @@ async def batch_update_articles(
     service: ArticleService = Depends(get_article_service),
     fm: FileManager = Depends(get_file_manager),
 ) -> ApiResponse[dict]:
-    updated = 0
+    articles = []
+    not_found: list[int] = []
     for aid in data.article_ids:
         article = await service.get_by_id(aid)
         if not article:
-            continue
+            not_found.append(aid)
+        else:
+            articles.append(article)
 
-        update_data: dict = {}
-        if data.category is not None:
-            update_data["category"] = data.category
-        if data.status is not None:
-            update_data["status"] = data.status
+    updated = 0
+    failed: list[int] = []
+    for article in articles:
+        try:
+            update_data: dict = {}
+            if data.category is not None:
+                update_data["category"] = data.category
+            if data.status is not None:
+                update_data["status"] = data.status
 
-        if update_data:
-            await service.update(aid, ArticleUpdate(**update_data))
+            if update_data:
+                await service.update(article.id, ArticleUpdate(**update_data))
 
-        if data.tags is not None:
-            meta = fm.read_json(article.slug, "meta.json")
-            if isinstance(meta, dict):
-                meta["seo_keywords"] = data.tags
-                fm.write_json(article.slug, "meta.json", meta)
+            if data.tags is not None:
+                meta = fm.read_json(article.slug, "meta.json")
+                if isinstance(meta, dict):
+                    meta["seo_keywords"] = data.tags
+                    fm.write_json(article.slug, "meta.json", meta)
 
-        updated += 1
+            updated += 1
+        except Exception:
+            failed.append(article.id)
 
-    return ApiResponse(success=True, data={"updated": updated})
+    return ApiResponse(
+        success=True,
+        data={"updated": updated, "not_found": not_found, "failed": failed},
+    )
