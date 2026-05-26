@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     sisyphus_dir: str = ".sisyphus"
 
     log_level: str = "INFO"
+    log_format: str = "text"
 
     stage_timeout: int = 600
     router_timeout: int = 120

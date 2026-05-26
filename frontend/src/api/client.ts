@@ -187,6 +187,15 @@ export const api = {
     },
   },
 
+  health: {
+    detailed: () => request<{
+      status: string;
+      timestamp: string;
+      version: string;
+      checks: Record<string, { status: string; message?: string; blog_url?: string; http_status?: number; path?: string; version?: string }>;
+    }>("/health/detailed"),
+  },
+
   settings: {
     getStyleGuide: () => requestText("/settings/style-guide"),
     getObsidian: () =>

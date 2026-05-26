@@ -2,6 +2,7 @@ import asyncio
 import shutil
 from datetime import UTC, datetime
 
+import httpx
 from fastapi import APIRouter
 
 from app.config import settings
@@ -75,6 +76,25 @@ async def health_detailed() -> ApiResponse[dict]:
         )
     else:
         checks["obsidian_vault"] = {"status": "disabled", "message": "설정 안 됨"}
+
+    blog_url = settings.tistory_blog_url
+    if blog_url:
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                resp = await client.get(blog_url, follow_redirects=True)
+            checks["tistory"] = {
+                "status": "ok" if resp.status_code < 400 else "warning",
+                "blog_url": blog_url,
+                "http_status": resp.status_code,
+            }
+        except Exception as e:
+            checks["tistory"] = {
+                "status": "error",
+                "blog_url": blog_url,
+                "message": str(e),
+            }
+    else:
+        checks["tistory"] = {"status": "disabled", "message": "블로그 URL 미설정"}
 
     overall = "healthy"
     if any(c["status"] == "error" for c in checks.values()):
