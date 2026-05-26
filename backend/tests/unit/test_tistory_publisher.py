@@ -15,11 +15,18 @@ def test_publisher_init_strips_trailing_slash() -> None:
     assert pub._blog_url == "https://example.tistory.com"
 
 
+def test_publisher_platform_name() -> None:
+    pub = TistoryPublisher("https://jaylenhan.tistory.com")
+    assert pub.platform_name == "tistory"
+
+
 def test_selectors_defined() -> None:
     assert "html_tab" in TISTORY_EDITOR_SELECTORS
     assert "content_area" in TISTORY_EDITOR_SELECTORS
     assert "title_input" in TISTORY_EDITOR_SELECTORS
     assert "publish_button" in TISTORY_EDITOR_SELECTORS
+    for key, val in TISTORY_EDITOR_SELECTORS.items():
+        assert isinstance(val, list), f"{key} should be a list of selectors"
 
 
 @pytest.mark.asyncio
@@ -264,10 +271,10 @@ async def test_fill_editor_textarea_content() -> None:
     mock_content_el = AsyncMock()
     mock_content_el.evaluate = AsyncMock(return_value="TEXTAREA")
 
-    selectors = TISTORY_EDITOR_SELECTORS
+    content_sels = set(TISTORY_EDITOR_SELECTORS["content_area"])
 
     async def query_selector_side_effect(selector: str):
-        if selector == selectors["content_area"]:
+        if selector in content_sels:
             return mock_content_el
         return None
 
@@ -290,10 +297,10 @@ async def test_fill_editor_codemirror_content() -> None:
     mock_content_el = AsyncMock()
     mock_content_el.evaluate = AsyncMock(return_value="DIV")
 
-    selectors = TISTORY_EDITOR_SELECTORS
+    content_sels = set(TISTORY_EDITOR_SELECTORS["content_area"])
 
     async def query_selector_side_effect(selector: str):
-        if selector == selectors["content_area"]:
+        if selector in content_sels:
             return mock_content_el
         return None
 
@@ -305,7 +312,6 @@ async def test_fill_editor_codemirror_content() -> None:
         result = await pub.publish("제목", "<p>CodeMirror 내용</p>")
 
     assert result["success"] is True
-    # CodeMirror 분기에서는 page.evaluate를 호출
     mock_page.evaluate.assert_awaited_once()
     call_args = mock_page.evaluate.call_args
     assert "CodeMirror" in call_args[0][0]
@@ -331,10 +337,10 @@ async def test_fill_editor_selects_category() -> None:
     mock_cat_el = AsyncMock()
     mock_cat_el.query_selector_all = AsyncMock(return_value=[mock_opt1, mock_opt2])
 
-    selectors = TISTORY_EDITOR_SELECTORS
+    cat_sels = set(TISTORY_EDITOR_SELECTORS["category_select"])
 
     async def query_selector_side_effect(selector: str):
-        if selector == selectors["category_select"]:
+        if selector in cat_sels:
             return mock_cat_el
         return None
 
@@ -361,10 +367,10 @@ async def test_fill_editor_category_no_match() -> None:
     mock_cat_el = AsyncMock()
     mock_cat_el.query_selector_all = AsyncMock(return_value=[mock_opt])
 
-    selectors = TISTORY_EDITOR_SELECTORS
+    cat_sels = set(TISTORY_EDITOR_SELECTORS["category_select"])
 
     async def query_selector_side_effect(selector: str):
-        if selector == selectors["category_select"]:
+        if selector in cat_sels:
             return mock_cat_el
         return None
 
@@ -391,10 +397,10 @@ async def test_fill_editor_category_option_no_value() -> None:
     mock_cat_el = AsyncMock()
     mock_cat_el.query_selector_all = AsyncMock(return_value=[mock_opt])
 
-    selectors = TISTORY_EDITOR_SELECTORS
+    cat_sels = set(TISTORY_EDITOR_SELECTORS["category_select"])
 
     async def query_selector_side_effect(selector: str):
-        if selector == selectors["category_select"]:
+        if selector in cat_sels:
             return mock_cat_el
         return None
 
