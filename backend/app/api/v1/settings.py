@@ -102,6 +102,31 @@ async def update_general_settings(data: GeneralSettings) -> ApiResponse[GeneralS
     return ApiResponse(success=True, data=data)
 
 
+class BrandPersona(BaseModel):
+    name: str = "기본"
+    tone: str = "격식체"
+    writing_style: str = "기술 블로그 전문가"
+    target_audience: str = "AI/개발 분야 종사자"
+    vocabulary_level: str = "전문가"
+    emoji_usage: bool = False
+    first_person: str = "필자"
+
+
+@router.get("/brand-persona")
+async def get_brand_persona() -> ApiResponse[BrandPersona]:
+    user = _load_user_settings()
+    persona = user.get("brand_persona", {})
+    return ApiResponse(success=True, data=BrandPersona(**persona) if persona else BrandPersona())
+
+
+@router.put("/brand-persona")
+async def update_brand_persona(data: BrandPersona) -> ApiResponse[BrandPersona]:
+    user = _load_user_settings()
+    user["brand_persona"] = data.model_dump()
+    _save_user_settings(user)
+    return ApiResponse(success=True, data=data)
+
+
 class BatchUpdateRequest(BaseModel):
     article_ids: list[int]
     category: str | None = None

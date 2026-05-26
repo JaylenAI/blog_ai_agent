@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.pipeline_run import PipelineRun, PipelineStage, PipelineStatus
 from app.pipeline.base import PipelineEvent, Stage, StageInput
+from app.services.webhook_service import dispatch_webhook
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -86,11 +87,18 @@ class PipelineOrchestrator:
                 pipeline_run.error_message = str(e)
                 await session.flush()
 
-                yield PipelineEvent(
+                error_event = PipelineEvent(
                     event_type="stage_error",
                     stage=stage.name,
                     message=str(e),
                 )
+                yield error_event
+                await dispatch_webhook("pipeline_error", {
+                    "run_id": pipeline_run.id,
+                    "article_id": pipeline_run.article_id,
+                    "stage": stage.name,
+                    "error": str(e),
+                })
                 return
 
             elapsed = (datetime.now(UTC) - stage_start).total_seconds()
@@ -113,12 +121,18 @@ class PipelineOrchestrator:
                 pipeline_run.status = PipelineStatus.PAUSED
                 await session.flush()
 
-                yield PipelineEvent(
+                gate_event = PipelineEvent(
                     event_type="gate_pending",
                     stage=stage.name,
                     message=f"{stage.name} 사용자 검수 대기",
                     data=output.data,
                 )
+                yield gate_event
+                await dispatch_webhook("gate_pending", {
+                    "run_id": pipeline_run.id,
+                    "article_id": pipeline_run.article_id,
+                    "stage": stage.name,
+                })
                 return
 
             stage_input = StageInput(
@@ -147,3 +161,8 @@ class PipelineOrchestrator:
             stage="all",
             message="파이프라인 완료",
         )
+        await dispatch_webhook("pipeline_complete", {
+            "run_id": pipeline_run.id,
+            "article_id": pipeline_run.article_id,
+            "duration_seconds": pipeline_run.duration_seconds,
+        })
