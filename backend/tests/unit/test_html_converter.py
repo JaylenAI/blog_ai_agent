@@ -197,3 +197,54 @@ def test_invalid_image_syntax() -> None:
     from app.publishers.html_converter import _convert_image
     result = _convert_image("not an image", "")
     assert "<p>" in result
+
+
+def test_og_meta_tags_complete() -> None:
+    content = "## 테스트"
+    meta = {
+        "title": "OG 테스트",
+        "seo_keywords": ["키워드"],
+        "description": "OG 설명",
+        "blog_url": "https://jaylenhan.tistory.com/123",
+        "og_image": "https://cdn.example.com/thumb.png",
+    }
+    html = convert_for_tistory(content, meta)
+    assert 'og:type' in html
+    assert 'og:title' in html
+    assert 'og:description' in html
+    assert 'og:url' in html
+    assert 'og:image' in html
+    assert 'twitter:card' in html
+    assert 'twitter:title' in html
+    assert 'twitter:description' in html
+    assert 'twitter:image' in html
+
+
+def test_json_ld_complete_fields() -> None:
+    content = "# 완성"
+    meta = {
+        "title": "JSON-LD 완성 테스트",
+        "seo_keywords": ["AI"],
+        "description": "설명",
+        "author": "TestUser",
+        "og_image": "https://cdn.example.com/thumb.png",
+        "blog_url": "https://jaylenhan.tistory.com/123",
+        "author_url": "https://jaylenhan.tistory.com",
+    }
+    html = convert_for_tistory(content, meta)
+    assert '"datePublished"' in html
+    assert '"dateModified"' in html
+    assert '"description"' in html
+    assert '"mainEntityOfPage"' in html
+    assert '"publisher"' in html
+    assert '"image"' in html
+    assert '"url": "https://jaylenhan.tistory.com"' in html
+
+
+def test_og_meta_tags_minimal() -> None:
+    content = "## 최소"
+    meta = {"title": "최소 테스트", "seo_keywords": []}
+    html = convert_for_tistory(content, meta)
+    assert 'og:title' in html
+    assert 'twitter:card' in html
+    assert 'og:url' not in html  # blog_url 없으면 og:url 없음

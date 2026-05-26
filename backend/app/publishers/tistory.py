@@ -1,22 +1,57 @@
 import asyncio
 from pathlib import Path
 
+from app.publishers.base import PublisherAdapter
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 TISTORY_EDITOR_SELECTORS = {
-    "html_tab": 'button[data-mode="html"], .btn_html, #editor-mode-html',
-    "content_area": '#content, .CodeMirror, textarea[name="content"]',
-    "title_input": '#title, input[name="title"]',
-    "category_select": '#category, select[name="category"]',
-    "publish_button": '#publish-layer-btn, .btn_publish, button.btn_save',
+    "html_tab": [
+        'button[data-mode="html"]',
+        ".btn_html",
+        "#editor-mode-html",
+        'button:has-text("HTML")',
+    ],
+    "content_area": [
+        "#content",
+        ".CodeMirror",
+        'textarea[name="content"]',
+        ".mce-tinymce textarea",
+    ],
+    "title_input": [
+        "#title",
+        'input[name="title"]',
+        ".tit_post input",
+    ],
+    "category_select": [
+        "#category",
+        'select[name="category"]',
+        ".category_select select",
+    ],
+    "publish_button": [
+        "#publish-layer-btn",
+        ".btn_publish",
+        "button.btn_save",
+    ],
 }
 
 
-class TistoryPublisher:
+async def _try_selectors(page, selectors: list[str]):  # noqa: ANN001, ANN202
+    for sel in selectors:
+        el = await page.query_selector(sel)
+        if el:
+            return el
+    return None
+
+
+class TistoryPublisher(PublisherAdapter):
     def __init__(self, blog_url: str) -> None:
         self._blog_url = blog_url.rstrip("/")
+
+    @property
+    def platform_name(self) -> str:
+        return "tistory"
 
     async def publish(
         self,
@@ -85,19 +120,16 @@ class TistoryPublisher:
         category: str,
         tags: list[str] | None,
     ) -> None:
-        title_sel = TISTORY_EDITOR_SELECTORS["title_input"]
-        title_el = await page.query_selector(title_sel)
+        title_el = await _try_selectors(page, TISTORY_EDITOR_SELECTORS["title_input"])
         if title_el:
             await title_el.fill(title)
 
-        html_tab = TISTORY_EDITOR_SELECTORS["html_tab"]
-        html_btn = await page.query_selector(html_tab)
+        html_btn = await _try_selectors(page, TISTORY_EDITOR_SELECTORS["html_tab"])
         if html_btn:
             await html_btn.click()
             await asyncio.sleep(1)
 
-        content_sel = TISTORY_EDITOR_SELECTORS["content_area"]
-        content_el = await page.query_selector(content_sel)
+        content_el = await _try_selectors(page, TISTORY_EDITOR_SELECTORS["content_area"])
         if content_el:
             tag_name = await content_el.evaluate("el => el.tagName")
             if tag_name.lower() == "textarea":
@@ -114,8 +146,7 @@ class TistoryPublisher:
                 )
 
         if category:
-            cat_sel = TISTORY_EDITOR_SELECTORS["category_select"]
-            cat_el = await page.query_selector(cat_sel)
+            cat_el = await _try_selectors(page, TISTORY_EDITOR_SELECTORS["category_select"])
             if cat_el:
                 options = await cat_el.query_selector_all("option")
                 for opt in options:

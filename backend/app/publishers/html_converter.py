@@ -163,21 +163,61 @@ def convert_for_tistory(
 def _build_meta_tags(title: str, keywords: list[str], meta: dict) -> str:
     description = meta.get("description", title)
     kw_str = ", ".join(keywords[:10])
-    return (
-        f'<meta name="description" content="{_escape_html(description)}">\n'
-        f'<meta name="keywords" content="{_escape_html(kw_str)}">'
-    )
+    blog_url = meta.get("blog_url", "")
+    og_image = meta.get("og_image", "")
+    parts = [
+        f'<meta name="description" content="{_escape_html(description)}">',
+        f'<meta name="keywords" content="{_escape_html(kw_str)}">',
+        f'<meta property="og:type" content="article">',
+        f'<meta property="og:title" content="{_escape_html(title)}">',
+        f'<meta property="og:description" content="{_escape_html(description)}">',
+    ]
+    if blog_url:
+        parts.append(f'<meta property="og:url" content="{_escape_html(blog_url)}">')
+    if og_image:
+        parts.append(f'<meta property="og:image" content="{_escape_html(og_image)}">')
+    parts.extend([
+        f'<meta name="twitter:card" content="summary_large_image">',
+        f'<meta name="twitter:title" content="{_escape_html(title)}">',
+        f'<meta name="twitter:description" content="{_escape_html(description)}">',
+    ])
+    if og_image:
+        parts.append(f'<meta name="twitter:image" content="{_escape_html(og_image)}">')
+    return "\n".join(parts)
 
 
 def _build_json_ld(title: str, meta: dict) -> str:
     import json
+    from datetime import datetime, timezone
 
-    ld = {
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+09:00")
+    description = meta.get("description", title)
+
+    ld: dict = {
         "@context": "https://schema.org",
         "@type": "BlogPosting",
         "headline": title,
-        "author": {"@type": "Person", "name": meta.get("author", "Jaylen H")},
+        "description": description,
+        "author": {
+            "@type": "Person",
+            "name": meta.get("author", "Jaylen H"),
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": meta.get("publisher_name", "AI의 정석"),
+        },
+        "datePublished": meta.get("date_published", now_iso),
+        "dateModified": meta.get("date_modified", now_iso),
         "keywords": meta.get("seo_keywords", []),
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": meta.get("blog_url", ""),
+        },
     }
+    if meta.get("og_image"):
+        ld["image"] = meta["og_image"]
+    if meta.get("author_url"):
+        ld["author"]["url"] = meta["author_url"]
+
     body = json.dumps(ld, ensure_ascii=False, indent=2)
     return f'<script type="application/ld+json">\n{body}\n</script>'
