@@ -1,4 +1,4 @@
-from app.pipeline.base import Stage, StageInput, StageOutput
+from app.pipeline.base import ProgressCallback, Stage, StageInput, StageOutput
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)

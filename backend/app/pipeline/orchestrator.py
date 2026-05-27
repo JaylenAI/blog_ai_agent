@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 
@@ -78,7 +79,7 @@ class PipelineOrchestrator:
                 task = asyncio.create_task(
                     stage.execute(
                         stage_input,
-                        on_progress=lambda evt: progress_queue.put_nowait(evt),
+                        on_progress=lambda evt, _q=progress_queue: _q.put_nowait(evt),
                     )
                 )
 
@@ -87,10 +88,8 @@ class PipelineOrchestrator:
                     remaining = deadline - asyncio.get_event_loop().time()
                     if remaining <= 0:
                         task.cancel()
-                        try:
+                        with contextlib.suppress(asyncio.CancelledError):
                             await task
-                        except asyncio.CancelledError:
-                            pass
                         raise TimeoutError(
                             f"Stage {stage.name} 타임아웃 ({timeout}초)"
                         )
@@ -99,7 +98,7 @@ class PipelineOrchestrator:
                             progress_queue.get(), timeout=min(0.5, remaining)
                         )
                         yield evt
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         continue
 
                 while not progress_queue.empty():

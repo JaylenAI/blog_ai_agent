@@ -46,7 +46,6 @@ test.describe("Phase 7 — TistoryPanel UI", () => {
     await page.goto("http://localhost:5173");
     await page.waitForLoadState("networkidle");
 
-    const sidebarItems = page.locator("[class*='sidebar'], nav, aside");
     const tistoryBtn = page.getByText("Tistory 연결", { exact: false });
 
     if (await tistoryBtn.isVisible()) {

@@ -1,7 +1,7 @@
 from app.claude.client import ClaudeClient
 from app.claude.prompts.router import RouterPrompt
 from app.formats import get_format_registry
-from app.pipeline.base import Stage, StageInput, StageOutput
+from app.pipeline.base import ProgressCallback, Stage, StageInput, StageOutput
 from app.utils.file_manager import FileManager
 from app.utils.logger import get_logger
 

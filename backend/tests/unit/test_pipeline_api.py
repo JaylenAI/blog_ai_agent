@@ -21,31 +21,86 @@ MOCK_ROUTER_RESPONSE = {
 
 _MOCK_LIB_OFFICIAL = {
     "references": [
-        {"url": "https://example.com/doc1", "title": "AI 공식 문서", "summary": "AI 핵심 개념 요약", "relevance_score": 0.9},
-        {"url": "https://example.com/doc2", "title": "딥러닝 가이드", "summary": "딥러닝 기초 설명", "relevance_score": 0.85},
-        {"url": "https://example.com/doc3", "title": "트랜스포머 아키텍처", "summary": "어텐션 메커니즘 해설", "relevance_score": 0.80},
+        {
+            "url": "https://example.com/doc1",
+            "title": "AI 공식 문서",
+            "summary": "AI 핵심 개념 요약",
+            "relevance_score": 0.9,
+        },
+        {
+            "url": "https://example.com/doc2",
+            "title": "딥러닝 가이드",
+            "summary": "딥러닝 기초 설명",
+            "relevance_score": 0.85,
+        },
+        {
+            "url": "https://example.com/doc3",
+            "title": "트랜스포머 아키텍처",
+            "summary": "어텐션 메커니즘 해설",
+            "relevance_score": 0.80,
+        },
     ]
 }
 _MOCK_LIB_GITHUB = {
     "references": [
-        {"url": "https://github.com/ai/repo1", "title": "AI Framework", "summary": "AI 프레임워크", "relevance_score": 0.88},
-        {"url": "https://github.com/ai/repo2", "title": "Deep Learning Lib", "summary": "딥러닝 라이브러리", "relevance_score": 0.82},
+        {
+            "url": "https://github.com/ai/repo1",
+            "title": "AI Framework",
+            "summary": "AI 프레임워크",
+            "relevance_score": 0.88,
+        },
+        {
+            "url": "https://github.com/ai/repo2",
+            "title": "Deep Learning Lib",
+            "summary": "딥러닝 라이브러리",
+            "relevance_score": 0.82,
+        },
     ]
 }
 _MOCK_LIB_BLOG_EN = {
     "references": [
-        {"url": "https://blog.en/ai-intro", "title": "AI Introduction", "summary": "AI 기초", "relevance_score": 0.87},
-        {"url": "https://blog.en/dl-guide", "title": "DL Practical Guide", "summary": "딥러닝 실전", "relevance_score": 0.83},
-        {"url": "https://blog.en/transformer", "title": "Transformer Explained", "summary": "트랜스포머 해설", "relevance_score": 0.80},
+        {
+            "url": "https://blog.en/ai-intro",
+            "title": "AI Introduction",
+            "summary": "AI 기초",
+            "relevance_score": 0.87,
+        },
+        {
+            "url": "https://blog.en/dl-guide",
+            "title": "DL Practical Guide",
+            "summary": "딥러닝 실전",
+            "relevance_score": 0.83,
+        },
+        {
+            "url": "https://blog.en/transformer",
+            "title": "Transformer Explained",
+            "summary": "트랜스포머 해설",
+            "relevance_score": 0.80,
+        },
     ]
 }
 _MOCK_LIB_BLOG_KR = {
     "references": [
-        {"url": "https://d2.naver.com/ai", "title": "네이버 AI 기술", "summary": "AI 기술 분석", "relevance_score": 0.86},
-        {"url": "https://tech.kakao.com/ai", "title": "카카오 AI", "summary": "AI 활용 사례", "relevance_score": 0.81},
+        {
+            "url": "https://d2.naver.com/ai",
+            "title": "네이버 AI 기술",
+            "summary": "AI 기술 분석",
+            "relevance_score": 0.86,
+        },
+        {
+            "url": "https://tech.kakao.com/ai",
+            "title": "카카오 AI",
+            "summary": "AI 활용 사례",
+            "relevance_score": 0.81,
+        },
     ]
 }
-MOCK_LIBRARIAN_RESPONSES = [_MOCK_LIB_OFFICIAL, _MOCK_LIB_GITHUB, _MOCK_LIB_BLOG_EN, _MOCK_LIB_BLOG_KR]
+MOCK_LIBRARIAN_RESPONSES = [
+    _MOCK_LIB_OFFICIAL,
+    _MOCK_LIB_GITHUB,
+    _MOCK_LIB_BLOG_EN,
+    _MOCK_LIB_BLOG_KR,
+]
 MOCK_LIBRARIAN_RESPONSE = _MOCK_LIB_OFFICIAL
 
 MOCK_OUTLINE_RESPONSE = {

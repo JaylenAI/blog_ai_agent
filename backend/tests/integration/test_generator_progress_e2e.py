@@ -4,7 +4,6 @@
 Gate 1 승인 → Generator → 섹션별 stage_progress 이벤트 검증.
 """
 
-import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.article_repo import ArticleRepository
@@ -208,7 +207,7 @@ async def test_generator_progress_section_headings_match_outline(
         s["heading"] for s in MOCK_OUTLINE_RESPONSE["outline"]
     ]
 
-    for we, expected_heading in zip(writing_events, outline_headings):
+    for we, expected_heading in zip(writing_events, outline_headings, strict=True):
         assert we.data["section_heading"] == expected_heading, (
             f"이벤트 heading '{we.data['section_heading']}' != "
             f"아웃라인 '{expected_heading}'"

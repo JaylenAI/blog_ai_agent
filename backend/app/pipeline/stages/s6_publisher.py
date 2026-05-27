@@ -1,5 +1,5 @@
 from app.images.mermaid_renderer import render_all_diagrams
-from app.pipeline.base import Stage, StageInput, StageOutput
+from app.pipeline.base import ProgressCallback, Stage, StageInput, StageOutput
 from app.publishers.html_converter import convert_for_tistory
 from app.services.obsidian_service import ObsidianService
 from app.utils.file_manager import FileManager

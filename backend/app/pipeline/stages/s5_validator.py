@@ -7,7 +7,7 @@ from app.claude.prompts.validator import ValidatorPrompt
 from app.config import settings
 from app.formats import get_format_registry
 from app.formats.schema import FormatSpec
-from app.pipeline.base import Stage, StageInput, StageOutput
+from app.pipeline.base import ProgressCallback, Stage, StageInput, StageOutput
 from app.utils.file_manager import FileManager
 from app.utils.logger import get_logger
 
@@ -325,7 +325,10 @@ def _check_slop_monotony(content: str) -> dict:
         "item": "AI 슬롭: 문장 구조 반복",
         "passed": passed,
         "score": 1.0 if passed else max(0.0, 1.0 - (max_streak - 3) * 0.25),
-        "message": f"최대 연속 동일 어미 {max_streak}회" + ("" if passed else " — 다양한 어미 사용 권장"),
+        "message": (
+            f"최대 연속 동일 어미 {max_streak}회"
+            + ("" if passed else " — 다양한 어미 사용 권장")
+        ),
     }
 
 

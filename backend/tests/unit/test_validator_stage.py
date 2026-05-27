@@ -341,7 +341,11 @@ def test_slop_superlatives_fail() -> None:
 
 
 def test_readability_normal() -> None:
-    text = "트랜스포머 아키텍처는 자연어 처리의 핵심 기술입니다. 이 모델은 어텐션 메커니즘을 활용하여 긴 문맥을 효과적으로 처리합니다. 특히 셀프 어텐션은 입력 시퀀스 내의 모든 위치 간 관계를 동시에 계산합니다."
+    text = (
+        "트랜스포머 아키텍처는 자연어 처리의 핵심 기술입니다. "
+        "이 모델은 어텐션 메커니즘을 활용하여 긴 문맥을 효과적으로 처리합니다. "
+        "특히 셀프 어텐션은 입력 시퀀스 내의 모든 위치 간 관계를 동시에 계산합니다."
+    )
     result = _check_readability(text)
     assert result["passed"] is True
 
@@ -579,7 +583,10 @@ def test_ai_tell_words_fail() -> None:
 
 
 def test_burstiness_pass() -> None:
-    text = "짧다. 이것은 아주 긴 문장으로 다양한 내용을 포함하고 있습니다. 중간. 또 다른 긴 문장이 여기 있다. 끝."
+    text = (
+        "짧다. 이것은 아주 긴 문장으로 다양한 내용을 포함하고 있습니다. "
+        "중간. 또 다른 긴 문장이 여기 있다. 끝."
+    )
     result = _check_burstiness(text)
     assert result["category"] == "geo"
 

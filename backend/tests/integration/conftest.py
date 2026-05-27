@@ -37,35 +37,90 @@ MOCK_ROUTER_RESPONSE = {
 
 _MOCK_OFFICIAL_REFS = {
     "references": [
-        {"url": "https://arxiv.org/abs/1706.03762", "title": "Attention Is All You Need", "summary": "트랜스포머 아키텍처 원논문", "relevance_score": 0.95},
-        {"url": "https://arxiv.org/abs/2005.14165", "title": "GPT-3 논문", "summary": "대규모 언어 모델 스케일링", "relevance_score": 0.92},
-        {"url": "https://docs.anthropic.com/overview", "title": "Claude 공식 문서", "summary": "Anthropic Claude 개요", "relevance_score": 0.88},
+        {
+            "url": "https://arxiv.org/abs/1706.03762",
+            "title": "Attention Is All You Need",
+            "summary": "트랜스포머 아키텍처 원논문",
+            "relevance_score": 0.95,
+        },
+        {
+            "url": "https://arxiv.org/abs/2005.14165",
+            "title": "GPT-3 논문",
+            "summary": "대규모 언어 모델 스케일링",
+            "relevance_score": 0.92,
+        },
+        {
+            "url": "https://docs.anthropic.com/overview",
+            "title": "Claude 공식 문서",
+            "summary": "Anthropic Claude 개요",
+            "relevance_score": 0.88,
+        },
     ]
 }
 
 _MOCK_GITHUB_REFS = {
     "references": [
-        {"url": "https://github.com/huggingface/transformers", "title": "Hugging Face Transformers", "summary": "트랜스포머 모델 라이브러리", "relevance_score": 0.90},
-        {"url": "https://github.com/openai/gpt-3", "title": "GPT-3 Repository", "summary": "GPT-3 관련 코드", "relevance_score": 0.85},
+        {
+            "url": "https://github.com/huggingface/transformers",
+            "title": "Hugging Face Transformers",
+            "summary": "트랜스포머 모델 라이브러리",
+            "relevance_score": 0.90,
+        },
+        {
+            "url": "https://github.com/openai/gpt-3",
+            "title": "GPT-3 Repository",
+            "summary": "GPT-3 관련 코드",
+            "relevance_score": 0.85,
+        },
     ]
 }
 
 _MOCK_BLOG_EN_REFS = {
     "references": [
-        {"url": "https://blog.example.com/llm-explained", "title": "LLM Explained", "summary": "LLM 기초 설명", "relevance_score": 0.88},
-        {"url": "https://blog.example.com/transformer-guide", "title": "Transformer Guide", "summary": "트랜스포머 가이드", "relevance_score": 0.82},
-        {"url": "https://blog.example.com/scaling-laws", "title": "Scaling Laws", "summary": "스케일링 법칙 분석", "relevance_score": 0.80},
+        {
+            "url": "https://blog.example.com/llm-explained",
+            "title": "LLM Explained",
+            "summary": "LLM 기초 설명",
+            "relevance_score": 0.88,
+        },
+        {
+            "url": "https://blog.example.com/transformer-guide",
+            "title": "Transformer Guide",
+            "summary": "트랜스포머 가이드",
+            "relevance_score": 0.82,
+        },
+        {
+            "url": "https://blog.example.com/scaling-laws",
+            "title": "Scaling Laws",
+            "summary": "스케일링 법칙 분석",
+            "relevance_score": 0.80,
+        },
     ]
 }
 
 _MOCK_BLOG_KR_REFS = {
     "references": [
-        {"url": "https://d2.naver.com/llm", "title": "네이버 D2 LLM 글", "summary": "LLM 기술 해설", "relevance_score": 0.87},
-        {"url": "https://tech.kakao.com/llm-intro", "title": "카카오 LLM 소개", "summary": "LLM 활용 사례", "relevance_score": 0.83},
+        {
+            "url": "https://d2.naver.com/llm",
+            "title": "네이버 D2 LLM 글",
+            "summary": "LLM 기술 해설",
+            "relevance_score": 0.87,
+        },
+        {
+            "url": "https://tech.kakao.com/llm-intro",
+            "title": "카카오 LLM 소개",
+            "summary": "LLM 활용 사례",
+            "relevance_score": 0.83,
+        },
     ]
 }
 
-MOCK_LIBRARIAN_RESPONSES = [_MOCK_OFFICIAL_REFS, _MOCK_GITHUB_REFS, _MOCK_BLOG_EN_REFS, _MOCK_BLOG_KR_REFS]
+MOCK_LIBRARIAN_RESPONSES = [
+    _MOCK_OFFICIAL_REFS,
+    _MOCK_GITHUB_REFS,
+    _MOCK_BLOG_EN_REFS,
+    _MOCK_BLOG_KR_REFS,
+]
 
 MOCK_LIBRARIAN_RESPONSE = _MOCK_OFFICIAL_REFS
 

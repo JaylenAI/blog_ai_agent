@@ -1,7 +1,7 @@
 import asyncio
 
 from app.claude.client import ClaudeClient
-from app.pipeline.base import Stage, StageInput, StageOutput
+from app.pipeline.base import ProgressCallback, Stage, StageInput, StageOutput
 from app.pipeline.subagents.base import Reference
 from app.pipeline.subagents.librarian_blog_en import BlogEnLibrarian
 from app.pipeline.subagents.librarian_blog_kr import BlogKrLibrarian
