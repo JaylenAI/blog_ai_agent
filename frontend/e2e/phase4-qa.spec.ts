@@ -1,6 +1,16 @@
 import { test, expect } from "@playwright/test";
 
 const BASE = "http://localhost:5173";
+const BACKEND_API = "http://localhost:8000/api/v1";
+
+async function isBackendUp(request: import("@playwright/test").APIRequestContext) {
+  try {
+    const r = await request.get(`${BACKEND_API}/health`, { timeout: 3000 });
+    return r.ok();
+  } catch {
+    return false;
+  }
+}
 
 test.describe.configure({ mode: "serial" });
 
@@ -27,12 +37,7 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
   });
 
   test("2. API 프록시 통합 — 아티클 데이터 로딩", async ({ page, request }) => {
-    let backendUp = false;
-    try {
-      const r = await request.get("http://localhost:8000/api/v1/health", { timeout: 3000 });
-      backendUp = r.ok();
-    } catch { /* noop */ }
-    test.skip(!backendUp, "백엔드 미실행 — skip");
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
 
     await page.goto(BASE);
 
@@ -92,12 +97,7 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
   });
 
   test("5. PublishKitModal 태그 편집 — 실제 아티클 데이터", async ({ page, request }) => {
-    let backendUp = false;
-    try {
-      const r = await request.get("http://localhost:8000/api/v1/health", { timeout: 3000 });
-      backendUp = r.ok();
-    } catch { /* noop */ }
-    test.skip(!backendUp, "백엔드 미실행 — skip");
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
 
     await page.goto(BASE);
     await page.waitForLoadState("networkidle");
@@ -144,7 +144,8 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
     expect(realErrors.length).toBe(0);
   });
 
-  test("7. 파이프라인 실행 이력 API 통합", async ({ page }) => {
+  test("7. 파이프라인 실행 이력 API 통합", async ({ page, request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     await page.goto(BASE);
 
     const resp = await page.evaluate(async () => {
@@ -165,7 +166,8 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
     }
   });
 
-  test("8. 에러 처리 — 404 응답 시 크래시 없음", async ({ page }) => {
+  test("8. 에러 처리 — 404 응답 시 크래시 없음", async ({ page, request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const errors: string[] = [];
     page.on("console", (msg) => {
       if (msg.type() === "error") errors.push(msg.text());
@@ -188,7 +190,8 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
     expect(isAlive).toBe(true);
   });
 
-  test("9. SSE 엔드포인트 가용성 확인", async ({ page }) => {
+  test("9. SSE 엔드포인트 가용성 확인", async ({ page, request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     await page.goto(BASE);
 
     const resp = await page.evaluate(async () => {
