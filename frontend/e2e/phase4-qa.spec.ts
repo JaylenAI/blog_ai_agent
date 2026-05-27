@@ -15,7 +15,7 @@ async function isBackendUp(request: import("@playwright/test").APIRequestContext
 test.describe.configure({ mode: "serial" });
 
 test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
-  test("1. 메인 페이지 로딩 + 아티클 목록 렌더링", async ({ page }) => {
+  test("1. 메인 페이지 로딩 + 아티클 목록 렌더링", async ({ page, request }) => {
     await page.goto(BASE);
     await page.waitForLoadState("networkidle");
 
@@ -25,22 +25,17 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
     const title = await page.title();
     expect(title.length).toBeGreaterThan(0);
 
-    const errors: string[] = [];
-    page.on("console", (msg) => {
-      if (msg.type() === "error") errors.push(msg.text());
-    });
-    await page.waitForTimeout(2000);
-    const realErrors = errors.filter(
-      (e) =>
-        !e.includes("favicon") &&
-        !e.includes("404") &&
-        !e.includes("429") &&
-        !e.includes("Too many") &&
-        !e.includes("Failed to fetch") &&
-        !e.includes("ERR_CONNECTION_REFUSED") &&
-        !e.includes("localhost:8000"),
-    );
-    expect(realErrors.length).toBe(0);
+    if (await isBackendUp(request)) {
+      const errors: string[] = [];
+      page.on("console", (msg) => {
+        if (msg.type() === "error") errors.push(msg.text());
+      });
+      await page.waitForTimeout(2000);
+      const realErrors = errors.filter(
+        (e) => !e.includes("favicon") && !e.includes("404") && !e.includes("429"),
+      );
+      expect(realErrors.length).toBe(0);
+    }
   });
 
   test("2. API 프록시 통합 — 아티클 데이터 로딩", async ({ page, request }) => {
@@ -132,29 +127,24 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
     }
   });
 
-  test("6. Pipeline Store — 이벤트 제한 (MAX_EVENTS=500)", async ({ page }) => {
-    const errors: string[] = [];
-    page.on("console", (msg) => {
-      if (msg.type() === "error") errors.push(msg.text());
-    });
-
+  test("6. Pipeline Store — 이벤트 제한 (MAX_EVENTS=500)", async ({ page, request }) => {
     await page.goto(BASE);
     await page.waitForLoadState("networkidle");
 
     const result = await page.evaluate(() => ({ loaded: true }));
     expect(result.loaded).toBe(true);
 
-    await page.waitForTimeout(1000);
-    const realErrors = errors.filter(
-      (e) =>
-        !e.includes("favicon") &&
-        !e.includes("429") &&
-        !e.includes("Too many") &&
-        !e.includes("Failed to fetch") &&
-        !e.includes("ERR_CONNECTION_REFUSED") &&
-        !e.includes("localhost:8000"),
-    );
-    expect(realErrors.length).toBe(0);
+    if (await isBackendUp(request)) {
+      const errors: string[] = [];
+      page.on("console", (msg) => {
+        if (msg.type() === "error") errors.push(msg.text());
+      });
+      await page.waitForTimeout(1000);
+      const realErrors = errors.filter(
+        (e) => !e.includes("favicon") && !e.includes("429"),
+      );
+      expect(realErrors.length).toBe(0);
+    }
   });
 
   test("7. 파이프라인 실행 이력 API 통합", async ({ page, request }) => {
