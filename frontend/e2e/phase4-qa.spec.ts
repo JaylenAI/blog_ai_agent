@@ -26,7 +26,14 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
     expect(realErrors.length).toBe(0);
   });
 
-  test("2. API 프록시 통합 — 아티클 데이터 로딩", async ({ page }) => {
+  test("2. API 프록시 통합 — 아티클 데이터 로딩", async ({ page, request }) => {
+    let backendUp = false;
+    try {
+      const r = await request.get("http://localhost:8000/api/v1/health", { timeout: 3000 });
+      backendUp = r.ok();
+    } catch { /* noop */ }
+    test.skip(!backendUp, "백엔드 미실행 — skip");
+
     await page.goto(BASE);
 
     const resp = await page.evaluate(async () => {
@@ -34,7 +41,6 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
       return { status: r.status, body: await r.json() };
     });
 
-    // 200 또는 429(rate limit) 모두 API 프록시가 동작한다는 증거
     expect([200, 429]).toContain(resp.status);
 
     if (resp.status === 200) {

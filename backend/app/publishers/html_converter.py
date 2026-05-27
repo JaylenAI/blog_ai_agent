@@ -1,4 +1,5 @@
 import re
+from datetime import UTC
 
 from app.utils.logger import get_logger
 
@@ -168,7 +169,7 @@ def _build_meta_tags(title: str, keywords: list[str], meta: dict) -> str:
     parts = [
         f'<meta name="description" content="{_escape_html(description)}">',
         f'<meta name="keywords" content="{_escape_html(kw_str)}">',
-        f'<meta property="og:type" content="article">',
+        '<meta property="og:type" content="article">',
         f'<meta property="og:title" content="{_escape_html(title)}">',
         f'<meta property="og:description" content="{_escape_html(description)}">',
     ]
@@ -177,7 +178,7 @@ def _build_meta_tags(title: str, keywords: list[str], meta: dict) -> str:
     if og_image:
         parts.append(f'<meta property="og:image" content="{_escape_html(og_image)}">')
     parts.extend([
-        f'<meta name="twitter:card" content="summary_large_image">',
+        '<meta name="twitter:card" content="summary_large_image">',
         f'<meta name="twitter:title" content="{_escape_html(title)}">',
         f'<meta name="twitter:description" content="{_escape_html(description)}">',
     ])
@@ -188,9 +189,9 @@ def _build_meta_tags(title: str, keywords: list[str], meta: dict) -> str:
 
 def _build_json_ld(title: str, meta: dict) -> str:
     import json
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+09:00")
+    now_iso = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+09:00")
     description = meta.get("description", title)
 
     ld: dict = {

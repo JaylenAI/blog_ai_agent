@@ -4,8 +4,6 @@ import json
 import logging
 from unittest.mock import patch
 
-import pytest
-
 
 def test_json_formatter_output() -> None:
     from app.utils.logger import JsonFormatter

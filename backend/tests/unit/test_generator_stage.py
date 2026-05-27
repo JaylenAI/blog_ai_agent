@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from app.pipeline.base import StageInput
 from app.pipeline.stages.s4_generator import GeneratorStage, _extract_mermaid_blocks

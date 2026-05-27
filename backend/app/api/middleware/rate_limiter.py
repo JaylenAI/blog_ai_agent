@@ -2,7 +2,7 @@ import time
 from collections import defaultdict
 
 from starlette.responses import JSONResponse
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.utils.logger import get_logger
 

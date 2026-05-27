@@ -4,8 +4,18 @@ test.describe.configure({ mode: "serial" });
 
 const API = "http://localhost:8000/api/v1";
 
+async function isBackendUp(request: import("@playwright/test").APIRequestContext) {
+  try {
+    const res = await request.get(`${API}/../health`, { timeout: 3000 });
+    return res.ok();
+  } catch {
+    return false;
+  }
+}
+
 test.describe("Phase 6 — Calendar API", () => {
   test("GET /calendar returns article list", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.get(`${API}/calendar`);
     expect([200, 429]).toContain(res.status());
     if (res.status() === 200) {
@@ -16,6 +26,7 @@ test.describe("Phase 6 — Calendar API", () => {
   });
 
   test("PUT /calendar/:id/schedule sets scheduled_at", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const listRes = await request.get(`${API}/calendar`);
     if (listRes.status() !== 200) return;
     const articles = (await listRes.json()).data;
@@ -36,6 +47,7 @@ test.describe("Phase 6 — Calendar API", () => {
   test("DELETE /calendar/:id/schedule clears scheduled_at", async ({
     request,
   }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const listRes = await request.get(`${API}/calendar`);
     if (listRes.status() !== 200) return;
     const articles = (await listRes.json()).data;
@@ -52,6 +64,7 @@ test.describe("Phase 6 — Calendar API", () => {
   });
 
   test("PUT /calendar/9999/schedule returns not found", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.put(`${API}/calendar/9999/schedule`, {
       data: { scheduled_at: "2026-07-01T09:00:00" },
     });
@@ -65,6 +78,7 @@ test.describe("Phase 6 — Calendar API", () => {
 
 test.describe("Phase 6 — Webhooks API", () => {
   test("GET /webhooks returns list", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.get(`${API}/webhooks`);
     expect([200, 429]).toContain(res.status());
     if (res.status() === 200) {
@@ -75,6 +89,7 @@ test.describe("Phase 6 — Webhooks API", () => {
   });
 
   test("POST /webhooks creates webhook", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.post(`${API}/webhooks`, {
       data: {
         url: "https://example.com/test-hook",
@@ -94,6 +109,7 @@ test.describe("Phase 6 — Webhooks API", () => {
   test("PATCH /webhooks/:id/toggle toggles active state", async ({
     request,
   }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const listRes = await request.get(`${API}/webhooks`);
     if (listRes.status() !== 200) return;
     const hooks = (await listRes.json()).data;
@@ -110,6 +126,7 @@ test.describe("Phase 6 — Webhooks API", () => {
   });
 
   test("DELETE /webhooks/:id removes webhook", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const listRes = await request.get(`${API}/webhooks`);
     if (listRes.status() !== 200) return;
     const hooks = (await listRes.json()).data;
@@ -125,6 +142,7 @@ test.describe("Phase 6 — Webhooks API", () => {
   });
 
   test("DELETE /webhooks/9999 returns not found", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.delete(`${API}/webhooks/9999`);
     expect([200, 429]).toContain(res.status());
     if (res.status() === 200) {
@@ -136,6 +154,7 @@ test.describe("Phase 6 — Webhooks API", () => {
 
 test.describe("Phase 6 — Brand Persona API", () => {
   test("GET /settings/brand-persona returns defaults", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.get(`${API}/settings/brand-persona`);
     expect([200, 429]).toContain(res.status());
     if (res.status() === 200) {
@@ -149,6 +168,7 @@ test.describe("Phase 6 — Brand Persona API", () => {
   });
 
   test("PUT /settings/brand-persona updates persona", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.put(`${API}/settings/brand-persona`, {
       data: {
         name: "E2E 테스트",
@@ -172,6 +192,7 @@ test.describe("Phase 6 — Brand Persona API", () => {
   test("GET /settings/brand-persona returns updated values", async ({
     request,
   }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.get(`${API}/settings/brand-persona`);
     expect([200, 429]).toContain(res.status());
     if (res.status() === 200) {
@@ -183,6 +204,7 @@ test.describe("Phase 6 — Brand Persona API", () => {
   test("PUT /settings/brand-persona restores defaults", async ({
     request,
   }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     await request.put(`${API}/settings/brand-persona`, {
       data: {
         name: "기본",
@@ -199,6 +221,7 @@ test.describe("Phase 6 — Brand Persona API", () => {
 
 test.describe("Phase 6 — Publisher Registry & Settings", () => {
   test("GET /settings/general returns settings", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.get(`${API}/settings/general`);
     expect([200, 429]).toContain(res.status());
     if (res.status() === 200) {
@@ -209,6 +232,7 @@ test.describe("Phase 6 — Publisher Registry & Settings", () => {
   });
 
   test("GET /settings/obsidian returns settings", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.get(`${API}/settings/obsidian`);
     expect([200, 429]).toContain(res.status());
     if (res.status() === 200) {
@@ -219,6 +243,7 @@ test.describe("Phase 6 — Publisher Registry & Settings", () => {
   });
 
   test("GET /settings/style-guide returns content", async ({ request }) => {
+    test.skip(!(await isBackendUp(request)), "백엔드 미실행 — skip");
     const res = await request.get(`${API}/settings/style-guide`);
     expect([200, 429]).toContain(res.status());
   });

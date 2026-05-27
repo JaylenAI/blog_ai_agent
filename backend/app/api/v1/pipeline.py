@@ -321,7 +321,7 @@ def _sse_from_queue(queue: asyncio.Queue) -> EventSourceResponse:
             while True:
                 try:
                     event_dict = await asyncio.wait_for(queue.get(), timeout=15)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield {"comment": "keepalive"}
                     continue
                 if event_dict is None:

@@ -348,7 +348,7 @@ class PipelineService:
             ]
         return []
 
-    async def _persist_metadata(self, article: "Article") -> None:
+    async def _persist_metadata(self, article: Article) -> None:
         from datetime import UTC, datetime
 
         meta = self._fm.read_json(article.slug, "meta.json")
