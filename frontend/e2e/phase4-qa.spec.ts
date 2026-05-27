@@ -91,7 +91,14 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
     expect(scripts.length).toBeGreaterThan(0);
   });
 
-  test("5. PublishKitModal 태그 편집 — 실제 아티클 데이터", async ({ page }) => {
+  test("5. PublishKitModal 태그 편집 — 실제 아티클 데이터", async ({ page, request }) => {
+    let backendUp = false;
+    try {
+      const r = await request.get("http://localhost:8000/api/v1/health", { timeout: 3000 });
+      backendUp = r.ok();
+    } catch { /* noop */ }
+    test.skip(!backendUp, "백엔드 미실행 — skip");
+
     await page.goto(BASE);
     await page.waitForLoadState("networkidle");
 
