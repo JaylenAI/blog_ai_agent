@@ -17,9 +17,12 @@ export function stripWrappingCodeFence(text: string): string {
   const match = WRAPPING_FENCE.exec(text.trim());
   if (match === null) return text;
 
-  const lang = match[1].toLowerCase();
+  const [, langGroup, innerGroup] = match;
+  if (innerGroup === undefined) return text;
+
+  const lang = (langGroup ?? "").toLowerCase();
   if (!LANGS_TO_STRIP.has(lang)) return text;
 
   // 안쪽이 또 다른 단일 래핑 펜스면 한 번 더 처리(이중 래핑 방지).
-  return stripWrappingCodeFence(match[2]);
+  return stripWrappingCodeFence(innerGroup);
 }
