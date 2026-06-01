@@ -53,7 +53,8 @@ class GeneratorPrompt(PromptTemplate):
 각 섹션의 key_points를 모두 다루되, 자연스러운 흐름으로 연결하세요.
 참고자료를 인용할 때는 본문에 자연스럽게 녹여주세요.
 
-마크다운 본문만 출력하세요. JSON이나 다른 형식으로 감싸지 마세요."""
+마크다운 본문만 출력하세요. JSON이나 다른 형식으로 감싸지 마세요.
+전체 글을 ```markdown ... ``` 같은 코드펜스로 감싸지 마세요. 본문을 바로 시작하세요."""
 
     def render_section(self, **kwargs: str) -> str:
         format_spec: FormatSpec | None = kwargs.get("format_spec")
@@ -118,4 +119,5 @@ Key Points:
 이전 섹션 내용을 참고하여 자연스럽게 연결하세요.
 참고자료를 인용할 때는 본문에 자연스럽게 녹여주세요.
 
-마크다운 본문만 출력하세요. JSON이나 다른 형식으로 감싸지 마세요."""
+마크다운 본문만 출력하세요. JSON이나 다른 형식으로 감싸지 마세요.
+전체 글을 ```markdown ... ``` 같은 코드펜스로 감싸지 마세요. 본문을 바로 시작하세요."""

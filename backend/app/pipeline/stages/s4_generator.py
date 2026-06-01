@@ -10,6 +10,7 @@ from app.pipeline.base import PipelineEvent, ProgressCallback, Stage, StageInput
 from app.pipeline.stages.section_writer import SectionWriter
 from app.utils.file_manager import FileManager
 from app.utils.logger import get_logger
+from app.utils.markdown import strip_wrapping_code_fence
 
 logger = get_logger(__name__)
 
@@ -108,7 +109,7 @@ class GeneratorStage(Stage):
                 "section_char_count": result.char_count,
             })
 
-        content = "\n\n".join(sections)
+        content = strip_wrapping_code_fence("\n\n".join(sections)).strip()
         self._fm.write_text(stage_input.slug, "final.md", content)
 
         char_count = len(content)

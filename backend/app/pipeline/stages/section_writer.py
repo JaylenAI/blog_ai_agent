@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from app.claude.client import ClaudeClient
 from app.claude.prompts.generator import GeneratorPrompt
 from app.utils.logger import get_logger
+from app.utils.markdown import strip_wrapping_code_fence
 
 if TYPE_CHECKING:
     from app.formats.schema import FormatSpec
@@ -88,7 +89,8 @@ class SectionWriter:
                     retry_count=attempt,
                 )
 
-            content = response.text.strip()
+            # LLM이 섹션 본문을 ```markdown ... ```으로 감싸는 경우 제거
+            content = strip_wrapping_code_fence(response.text.strip()).strip()
 
             if len(content) < MIN_SECTION_CHARS:
                 last_error = (

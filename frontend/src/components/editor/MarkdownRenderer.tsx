@@ -6,6 +6,7 @@ import rehypeRaw from "rehype-raw";
 import mermaid from "mermaid";
 import type { Components } from "react-markdown";
 import { useUIStore } from "../../stores/ui-store";
+import { stripWrappingCodeFence } from "./strip-fence";
 import "../../styles/markdown.css";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
@@ -139,6 +140,8 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   articleId,
 }: MarkdownRendererProps) {
   const components = useMemo(() => buildComponents(articleId), [articleId]);
+  // 이미 ```markdown 으로 감싸여 저장된 글도 정상 렌더링되도록 방어한다.
+  const cleaned = useMemo(() => stripWrappingCodeFence(content), [content]);
 
   return (
     <div className="markdown-body">
@@ -147,7 +150,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         rehypePlugins={[rehypeRaw, rehypeHighlight]}
         components={components}
       >
-        {content}
+        {cleaned}
       </ReactMarkdown>
     </div>
   );
