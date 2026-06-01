@@ -6,7 +6,8 @@
   <a href="https://github.com/JaylenAI/blog_ai_agent/actions"><img src="https://github.com/JaylenAI/blog_ai_agent/actions/workflows/ci.yml/badge.svg?branch=dev" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/cost%2Fpost-%240-success" alt="Cost: $0/post">
-  <img src="https://img.shields.io/badge/tests-969-brightgreen" alt="Tests: 969">
+  <img src="https://img.shields.io/badge/version-v0.1.1-blue" alt="Version: v0.1.1">
+  <img src="https://img.shields.io/badge/tests-1033-brightgreen" alt="Tests: 1033">
   <img src="https://img.shields.io/badge/coverage-88%25-brightgreen" alt="Coverage: 88%">
   <img src="https://img.shields.io/badge/lang-한국어-red" alt="Language: Korean">
 </p>
@@ -132,7 +133,7 @@ flowchart TD
 | **백엔드** | FastAPI + SQLAlchemy (async) + SQLite | SSE 스트리밍, Rate Limiting |
 | **프론트엔드** | React 19 + Vite 6 + Zustand 5 + Tailwind 4 | 6개 스토어, zod 런타임 검증 |
 | **다이어그램** | Mermaid + mermaid-cli | PNG 렌더링 |
-| **테스트** | pytest (600건) + Vitest (369건) + Playwright | 백엔드 88% 커버리지 |
+| **테스트** | pytest (609건) + Vitest (376건) + Playwright (48건) | 백엔드 88% 커버리지 |
 | **인프라** | Docker Compose + GitHub Actions CI | 3-job 파이프라인 |
 
 ---
@@ -208,25 +209,27 @@ curl -s http://localhost:8000/api/v1/health/detailed | python3 -m json.tool
 
 ## API 엔드포인트
 
-38개 REST API 엔드포인트를 제공합니다.
+49개 REST API 엔드포인트를 제공합니다.
 
 | 그룹 | 주요 엔드포인트 | 설명 |
 |------|----------------|------|
 | **Health** | `GET /api/v1/health/detailed` | DB, CLI, Mermaid, Obsidian 상태 확인 (2개) |
-| **Articles** | `POST /api/v1/articles` | 아티클 CRUD + 버전 관리 + Obsidian 연동 (15개) |
-| **Pipeline** | `POST /api/v1/pipeline/start/stream` | 파이프라인 실행, 승인/거부, 재시도 (12개) |
+| **Articles** | `POST /api/v1/articles` | 아티클 CRUD + 버전 관리 + Obsidian 연동 (16개) |
+| **Pipeline** | `POST /api/v1/pipeline/start/stream` | 파이프라인 실행, 승인/거부, 재시도 (13개) |
 | **Formats** | `GET /api/v1/formats` | 9개 포맷 조회 + 주제별 추천 (3개) |
-| **Settings** | `GET /api/v1/settings/general` | 설정 조회/변경 + 스타일 가이드 (6개) |
+| **Settings** | `GET /api/v1/settings/general` | 설정 조회/변경 + 스타일 가이드 (8개) |
+| **Calendar** | `GET /api/v1/calendar` | 발행 일정 조회/예약 (3개) |
+| **Webhooks** | `GET /api/v1/webhooks` | 웹훅 등록/토글/삭제 (4개) |
 
 ---
 
 ## 테스트
 
 ```bash
-# 백엔드 — 600 tests, 88% coverage
+# 백엔드 — 609 tests, 88% coverage
 cd backend && uv run pytest tests/ -x -q
 
-# 프론트엔드 — 369 tests
+# 프론트엔드 — 376 tests
 cd frontend && pnpm test
 
 # E2E (Playwright)
@@ -245,7 +248,7 @@ cd frontend && pnpm lint && pnpm typecheck
 blog_ai_agent/
 ├── backend/                        FastAPI 백엔드
 │   ├── app/
-│   │   ├── api/v1/                 REST API 38개 (health, articles, pipeline, formats, settings)
+│   │   ├── api/v1/                 REST API 49개 (health, articles, pipeline, formats, settings, calendar, webhooks)
 │   │   ├── pipeline/stages/        6 Stage (router → researcher → outliner → generator → validator → publisher)
 │   │   ├── pipeline/gates/         Gate 1 (아웃라인), Gate 2 (최종)
 │   │   ├── pipeline/subagents/     4 Librarian (공식문서, GitHub, 영문블로그, 한글블로그)
@@ -254,7 +257,7 @@ blog_ai_agent/
 │   │   ├── formats/definitions/    9개 블로그 포맷 YAML 정의
 │   │   ├── images/                 Mermaid + Playwright 이미지 생성
 │   │   └── services/               비즈니스 로직 (Article, Pipeline, Obsidian)
-│   └── tests/                      600 tests, 88% coverage (unit + integration)
+│   └── tests/                      609 tests, 88% coverage (unit + integration)
 │
 ├── frontend/                       React + Vite 프론트엔드
 │   ├── src/
@@ -312,11 +315,11 @@ cd blog_ai_agent
 
 # 백엔드
 cd backend && uv sync --all-extras --all-groups
-uv run pytest tests/ -x -q              # 600 tests 통과 확인
+uv run pytest tests/ -x -q              # 609 tests 통과 확인
 
 # 프론트엔드
 cd frontend && pnpm install
-pnpm test                                # 369 tests 통과 확인
+pnpm test                                # 376 tests 통과 확인
 pnpm lint && pnpm typecheck              # 린트 + 타입 체크
 ```
 

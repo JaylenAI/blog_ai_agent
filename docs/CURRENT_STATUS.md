@@ -1,15 +1,16 @@
-# 현재 상태 (2026-05-26)
+# 현재 상태 (2026-06-01) · v0.1.1
 
 ## 전체 진행률
 
 | 영역 | 상태 | 상세 |
 |------|------|------|
 | 백엔드 파이프라인 | ✅ 완료 | 6 Stage + 2 Gate 전체 구현 (Router→Researcher→Outliner→Gate1→Generator→Validator→Gate2→Publisher) |
-| 백엔드 테스트 | ✅ 600건, 88% | pytest + pytest-cov (unit + integration) |
+| 백엔드 테스트 | ✅ 609건, 88% | pytest + pytest-cov (unit + integration) |
 | 프론트엔드 컴포넌트 | ✅ 33개 | 3-pane 워크스페이스, Launcher, Gate 모달, PublishKit 등 |
-| 프론트엔드 테스트 | ✅ 369건 | Vitest + Testing Library |
+| 프론트엔드 테스트 | ✅ 376건 | Vitest + Testing Library |
+| E2E 테스트 | ✅ 48건 | Playwright (CI 1-worker, 전부 green) |
 | 프론트엔드 스토어/훅 | ✅ 완료 | Zustand 6 스토어, 커스텀 훅 5개 |
-| API 엔드포인트 | ✅ 38개 | articles 15 + pipeline 12 + settings 6 + formats 3 + health 2 |
+| API 엔드포인트 | ✅ 49개 | articles 16 + pipeline 13 + settings 8 + webhooks 4 + calendar 3 + formats 3 + health 2 |
 | SSE 실시간 스트리밍 | ✅ 완료 | REST → SSE 전환, 모듈 레벨 싱글톤 연결 관리, 섹션별 실시간 진행률 |
 | Zod 유효성 검증 | ✅ 완료 | API 응답 스키마 전체 적용 |
 | Docker | ✅ 완료 | docker-compose.yml (backend + frontend + healthcheck) |
@@ -23,9 +24,28 @@
 
 | 영역 | 테스트 수 | 커버리지 | 도구 |
 |------|----------|---------|------|
-| 백엔드 유닛/통합 | 600건 | 88% | pytest + pytest-cov |
-| 프론트엔드 유닛 | 369건 | — | Vitest + Testing Library |
-| E2E | — | — | Playwright |
+| 백엔드 유닛/통합 | 609건 | 88% | pytest + pytest-cov |
+| 프론트엔드 유닛 | 376건 | — | Vitest + Testing Library |
+| E2E | 48건 | — | Playwright |
+
+## 최근 작업 (2026-06-01) · v0.1.1
+
+### Generator ```markdown 펜스 오염 제거
+- **근본 원인**: Generator(Claude)가 본문을 ```markdown ... ``` 코드펜스로 감싸 반환 → 렌더러가 글 전체를 하나의 코드블록으로 표시
+- **생성 단계**: `SectionWriter`/`s4_generator`에 `strip_wrapping_code_fence` 후처리 추가 (전체 래핑 펜스만 제거, 본문 내 정상 코드블록은 유지)
+- **프롬프트**: Generator 프롬프트에 "전체를 코드펜스로 감싸지 말 것" 명시
+- **렌더링 방어**: `MarkdownRenderer`에 동일 strip 로직 적용 (이미 저장된 글도 정상 표시)
+
+### E2E 테스트 안정화
+- Playwright 포트 하드코딩(5173) 제거 → `E2E_PORT` 환경변수 + strictPort
+- spec 내 baseURL 하드코딩을 상대경로로 교체
+- 잔존 Gate 모달 scrim 간섭 방지 헬퍼(`dismissModalIfPresent`)
+- `isBackendUp()`이 429(rate limit)를 다운으로 오판하던 문제 수정
+- health 엔드포인트를 rate limit 대상에서 제외
+
+### 의존성/빌드 구조 정리
+- `httpx`를 dev → 런타임 의존성으로 이동 (clone 후 기동 실패 해결)
+- dev 도구(pytest-asyncio, ruff, mypy 등)를 `optional-dependencies` → `dependency-groups`로 이전 → `uv sync`/CI에서 누락 방지
 
 ## 최근 작업 (2026-05-26)
 
