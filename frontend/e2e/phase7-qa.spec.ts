@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { dismissModalIfPresent } from "./fixtures";
 
 test.describe.configure({ mode: "serial" });
 
@@ -7,7 +8,8 @@ const API = "http://localhost:8000/api/v1";
 async function isBackendUp(request: import("@playwright/test").APIRequestContext) {
   try {
     const res = await request.get(`${API}/../health`, { timeout: 3000 });
-    return res.ok();
+    // 429(rate limit)도 서버가 살아있다는 증거 — 다운으로 오판하지 않는다.
+    return res.ok() || res.status() === 429;
   } catch {
     return false;
   }
@@ -55,17 +57,24 @@ test.describe("Phase 7 — Health Check + Tistory Status", () => {
 
 test.describe("Phase 7 — TistoryPanel UI", () => {
   test("TistoryPanel shows connection status", async ({ page }) => {
-    await page.goto("http://localhost:5173");
+    await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    const tistoryBtn = page.getByText("Tistory 연결", { exact: false });
+    // 복원된 Gate 모달 등이 떠 있으면 scrim이 사이드바 클릭을 가로챈다 → 먼저 닫는다.
+    await dismissModalIfPresent(page);
 
-    if (await tistoryBtn.isVisible()) {
+    // 사이드바의 "Tistory 연결" 행(role=button)을 정확히 특정 — 패널 제목 텍스트와 구분.
+    const tistoryBtn = page
+      .locator('.sb-row[role="button"]')
+      .filter({ hasText: "Tistory 연결" })
+      .first();
+
+    if (await tistoryBtn.isVisible().catch(() => false)) {
       await tistoryBtn.click();
       await page.waitForTimeout(1000);
 
       const statusIndicator = page.locator("[role='status']");
-      if (await statusIndicator.isVisible()) {
+      if (await statusIndicator.isVisible().catch(() => false)) {
         const ariaLabel = await statusIndicator.getAttribute("aria-label");
         expect(ariaLabel).toContain("Tistory");
       }

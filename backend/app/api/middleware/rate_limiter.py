@@ -10,6 +10,8 @@ logger = get_logger(__name__)
 
 DEFAULT_LIMIT = 60
 DEFAULT_WINDOW = 60
+# 모니터링/생존 확인용 엔드포인트는 rate limit 대상에서 제외한다.
+DEFAULT_EXEMPT_PREFIXES = ("/api/v1/health",)
 
 
 class RateLimiterMiddleware:
@@ -19,10 +21,12 @@ class RateLimiterMiddleware:
         *,
         limit: int = DEFAULT_LIMIT,
         window: int = DEFAULT_WINDOW,
+        exempt_prefixes: tuple[str, ...] = DEFAULT_EXEMPT_PREFIXES,
     ) -> None:
         self.app = app
         self._limit = limit
         self._window = window
+        self._exempt_prefixes = exempt_prefixes
         self._requests: dict[str, list[float]] = defaultdict(list)
         self._request_count: int = 0
         self._full_cleanup_interval: int = 100
@@ -51,6 +55,11 @@ class RateLimiterMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
+        if any(path.startswith(prefix) for prefix in self._exempt_prefixes):
             await self.app(scope, receive, send)
             return
 

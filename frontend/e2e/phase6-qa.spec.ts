@@ -7,7 +7,8 @@ const API = "http://localhost:8000/api/v1";
 async function isBackendUp(request: import("@playwright/test").APIRequestContext) {
   try {
     const res = await request.get(`${API}/../health`, { timeout: 3000 });
-    return res.ok();
+    // 429(rate limit)도 서버가 살아있다는 증거 — 다운으로 오판하지 않는다.
+    return res.ok() || res.status() === 429;
   } catch {
     return false;
   }

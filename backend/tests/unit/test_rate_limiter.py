@@ -88,6 +88,36 @@ async def test_blocks_requests_over_limit() -> None:
 
 
 @pytest.mark.asyncio
+async def test_health_path_is_exempt() -> None:
+    """health 엔드포인트는 제한을 초과해도 항상 통과한다."""
+    inner_app = AsyncMock()
+    middleware = RateLimiterMiddleware(inner_app, limit=1, window=60)
+    receive = AsyncMock()
+
+    # limit=1을 한참 넘겨도 health는 모두 inner_app으로 전달돼야 한다.
+    for _ in range(5):
+        await middleware(
+            _make_scope(path="/api/v1/health"), receive, AsyncMock()
+        )
+
+    assert inner_app.call_count == 5
+
+
+@pytest.mark.asyncio
+async def test_health_detailed_path_is_exempt() -> None:
+    inner_app = AsyncMock()
+    middleware = RateLimiterMiddleware(inner_app, limit=1, window=60)
+    receive = AsyncMock()
+
+    for _ in range(5):
+        await middleware(
+            _make_scope(path="/api/v1/health/detailed"), receive, AsyncMock()
+        )
+
+    assert inner_app.call_count == 5
+
+
+@pytest.mark.asyncio
 async def test_different_ips_have_separate_limits() -> None:
     inner_app = AsyncMock()
     middleware = RateLimiterMiddleware(inner_app, limit=1, window=60)

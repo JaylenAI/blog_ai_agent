@@ -1,5 +1,18 @@
 import type { Page } from "@playwright/test";
 
+/**
+ * 복원된 Gate 모달 등이 떠 있으면 modal-scrim이 사이드바/리스트 클릭을 가로챈다.
+ * 실제 백엔드에 paused 상태 run이 남아 있으면 페이지 로드마다 자동으로 모달이 뜨므로,
+ * 사이드바를 조작하는 테스트는 진입 직후 이 헬퍼로 모달을 닫는다.
+ */
+export async function dismissModalIfPresent(page: Page): Promise<void> {
+  const scrim = page.locator(".modal-scrim");
+  if (await scrim.isVisible().catch(() => false)) {
+    await page.keyboard.press("Escape");
+    await scrim.waitFor({ state: "hidden", timeout: 5000 }).catch(() => {});
+  }
+}
+
 export const MOCK_ARTICLE = {
   id: 1,
   topic: "AI란 무엇인가?",

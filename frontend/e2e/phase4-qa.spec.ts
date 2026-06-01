@@ -1,12 +1,15 @@
 import { test, expect } from "@playwright/test";
+import { dismissModalIfPresent } from "./fixtures";
 
-const BASE = "http://localhost:5173";
+// 빈 문자열 → page.goto가 playwright.config의 baseURL을 사용 (포트 하드코딩 제거)
+const BASE = "";
 const BACKEND_API = "http://localhost:8000/api/v1";
 
 async function isBackendUp(request: import("@playwright/test").APIRequestContext) {
   try {
     const r = await request.get(`${BACKEND_API}/health`, { timeout: 3000 });
-    return r.ok();
+    // 429(rate limit)도 서버가 살아있다는 증거 — 다운으로 오판하지 않는다.
+    return r.ok() || r.status() === 429;
   } catch {
     return false;
   }
@@ -83,6 +86,7 @@ test.describe("Phase 4 E2E QA — 실제 데이터 기반", () => {
   test("4. GateModal 체크리스트 A11y — 빌드 무결성", async ({ page }) => {
     await page.goto(BASE);
     await page.waitForLoadState("networkidle");
+    await dismissModalIfPresent(page);
 
     const articleItem = page
       .locator('[class*="article"], [class*="list-item"], [class*="sidebar"] button, [class*="sidebar"] a')
